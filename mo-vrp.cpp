@@ -1,3 +1,4 @@
+#include<algorithm>
 #include<iostream>
 
 #include"ga_lib.h"
@@ -21,8 +22,11 @@ int main(int argc, char **argv){
     population[i].routeSet = decodeKromosom(config, population[i].kromosom, orderData);
     calculateFitness(&population[i]);
   }
-
-
+  sort(population, population+config.N, cmpIndividuFitness);
+  sortCrowdingDistance(population, config.N);
+  for(int i=0;i<config.N;i++){
+    cout<<population[i].totalDist<<" "<<population[i].routeCount<<" "<< population[i].crowdingDistance<<"\n";
+  }
   /*
     Start the GA
     for MaxIter
@@ -31,10 +35,9 @@ int main(int argc, char **argv){
     is less than the threshold
     for 100 consecutive iterations
   */
-  int sameFitnessCount = 0;
-  Individu bestIndividu;
-  for (int iter=0;iter<config.maxIter;iter++){
-
-  }
-
+  // int sameFitnessCount = 0;
+  // Individu bestIndividu;
+  // for (int iter=0;iter<config.maxIter;iter++){
+  //
+  // }
 }
