@@ -23,7 +23,10 @@ int main(int argc, char **argv){
     calculateFitness(&population[i]);
   }
   sort(population, population+config.N, cmpIndividuFitness);
-
+  sortCrowdingDistance(population, config.N);
+  for(int i=0;i<config.N;i++){
+    cout<<population[i].totalDist<<" "<<population[i].routeCount<<" "<< population[i].crowdingDistance<<"\n";
+  }
   /*
     Start the GA
     for MaxIter

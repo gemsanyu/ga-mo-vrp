@@ -1,6 +1,7 @@
 #include<algorithm>
 #include<fstream>
 #include<iostream>
+#include<limits>
 #include<sstream>
 #include<stdlib.h>
 #include<string>
@@ -24,6 +25,18 @@ void calculateFitness(Individu *individu){
 
 bool cmpIndividuFitness(Individu a, Individu b){
   return a.fitnessValue < b.fitnessValue;
+}
+
+bool cmpIndividuCrowdingDistance(Individu a, Individu b){
+  return a.crowdingDistance > b.crowdingDistance;
+}
+
+bool cmpIndividuTotalDist(Individu a, Individu b){
+  return a.totalDist < b.totalDist;
+}
+
+bool cmpIndividuRouteCount(Individu a, Individu b){
+  return a.routeCount < b.routeCount;
 }
 
 Individu* create1DArrayIndividu(int size){
@@ -54,6 +67,8 @@ RouteSet decodeKromosom(Config config, int *kromosom, OrderData orderData){
       route.clear();
       totalDist=0;
       totalOrder=0;
+      lastCoord=orderData.depot;
+      dist = euclideanDistance(lastCoord, orderData.customerData[custID].coordinate);
     }
     route.push_back(custID);
     totalDist += dist;
@@ -87,7 +102,7 @@ Individu orderCrossover_(Config config, Individu parentA, Individu parentB){
     a=b;
     b=c;
   }
-  
+
   /*
     copy parentA segment (a,b) to offspring segment(a,b)
   */
@@ -114,7 +129,6 @@ Individu orderCrossover_(Config config, Individu parentA, Individu parentB){
     genExistFlag[gen]=true;
     ofIdx = (ofIdx+1)%config.nCust;
   }
-
   return offspring;
 }
 
@@ -137,4 +151,59 @@ OrderData readOrderData(Config config){
   }
   dataFile.close();
   return odData;
+}
+
+
+/*
+  sort sub population p'
+  which |p'| + |new_pop| > config.N
+  so we can get the top by crowding distance
+  and only add those top individus to the new_pop
+*/
+void sortCrowdingDistance(Individu *population, int populationSize){
+  for(int i=0;i<populationSize;i++){
+    population[i].crowdingDistance=0;
+  }
+
+  /*
+    find span (max-min) of each objective
+  */
+  double spanTotalDist=0.00000001, spanRouteCount=0.00000001;
+  double maxTotDist=numeric_limits<double>::min(), minTotDist=numeric_limits<double>::max();
+  double maxRouteCount=numeric_limits<double>::min(), minRouteCount=numeric_limits<double>::max();
+  for(int i=0;i<populationSize;i++){
+    if (population[i].totalDist > maxTotDist){
+      maxTotDist = population[i].totalDist;
+    }
+    if (population[i].totalDist < minTotDist){
+      minTotDist = population[i].totalDist;
+    }
+    if (population[i].routeCount > maxRouteCount){
+      maxRouteCount = population[i].routeCount;
+    }
+    if (population[i].routeCount < minRouteCount){
+      minRouteCount = population[i].routeCount;
+    }
+  }
+  spanTotalDist += (maxTotDist-minTotDist);
+  spanRouteCount += (maxRouteCount-minRouteCount);
+
+  /*
+    sort by crowdingDistance per objective function
+  */
+  sort(population, population+populationSize, cmpIndividuTotalDist);
+  population[0].crowdingDistance=numeric_limits<double>::max();
+  population[populationSize-1].crowdingDistance=numeric_limits<double>::max();
+  for (int i=1;i<populationSize-1;i++){
+    population[i].crowdingDistance += (population[i+1].totalDist-population[i-1].totalDist)/spanTotalDist;
+  }
+
+  sort(population, population+populationSize, cmpIndividuRouteCount);
+  population[0].crowdingDistance=numeric_limits<double>::max();
+  population[populationSize-1].crowdingDistance=numeric_limits<double>::max();
+  for (int i=1;i<populationSize-1;i++){
+    population[i].crowdingDistance += (population[i+1].routeCount-population[i-1].routeCount)/spanRouteCount;
+  }
+
+  sort(population, population+populationSize, cmpIndividuCrowdingDistance);
 }
