@@ -22,7 +22,9 @@ int main(int argc, char **argv){
     calculateFitness(&population[i]);
   }
 
-
+  //Check the RSM Algorithm
+  //rsMutation(config,&population[0]);
+  
   /*
     Start the GA
     for MaxIter
@@ -34,7 +36,7 @@ int main(int argc, char **argv){
   int sameFitnessCount = 0;
   Individu bestIndividu;
   for (int iter=0;iter<config.maxIter;iter++){
-
+  
   }
 
 }

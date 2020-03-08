@@ -123,6 +123,32 @@ pair<Individu,Individu> orderCrossover(Config config, pair<Individu,Individu> pa
   offs.second = orderCrossover_(config, parents.second, parents.first);
 }
 
+
+void rsMutation(Config config, Individu *individu){
+  /*
+    First randomize Mutation-segment points a and b
+  */
+  int a=rand()%config.nCust;  
+  int b=rand()%config.nCust;
+  //Switch Mutation-segment points if a is higher than b
+  if (a>b){
+    int c=a;
+    a=b;
+    b=c;
+  }
+  int indxMutA = a;
+  int indxMutB = b;
+
+  //Swapping Algorithm
+  while(indxMutA<indxMutB){
+    int custID = individu->kromosom[indxMutA];
+    individu->kromosom[indxMutA] = individu->kromosom[indxMutB];
+    individu->kromosom[indxMutB] = custID;
+    indxMutA++;indxMutB--;
+  }
+
+}
+
 OrderData readOrderData(Config config){
   ifstream dataFile(config.fileName);
   OrderData odData;

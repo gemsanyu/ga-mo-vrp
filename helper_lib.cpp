@@ -48,3 +48,17 @@ Config readConfig(string configFileName){
   configFile.close();
   return config;
 }
+
+/*
+CONFIG SMALL-DISTRIBUTED-1
+Using small-distributed
+Num of Cust : 50
+Max Dist : 200
+Max Cap : 30
+Max Iteration : 1000000
+convergence threshold : 1e-09
+N : 1
+NP : 10
+pc : 0.8
+pm : 0.03
+*/
