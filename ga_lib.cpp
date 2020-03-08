@@ -126,6 +126,7 @@ Individu orderCrossover_(Config config, Individu parentA, Individu parentB){
       continue;
     }
     offspring.kromosom[ofIdx]=gen;
+
     genExistFlag[gen]=true;
     ofIdx = (ofIdx+1)%config.nCust;
   }
@@ -137,6 +138,30 @@ pair<Individu,Individu> orderCrossover(Config config, pair<Individu,Individu> pa
   offs.first = orderCrossover_(config, parents.first, parents.second);
   offs.second = orderCrossover_(config, parents.second, parents.first);
   return offs;
+}
+
+void rsMutation(Config config, Individu *individu){
+  /*
+    First randomize Mutation-segment points a and b
+  */
+  int a=rand()%config.nCust;  
+  int b=rand()%config.nCust;
+  //Switch Mutation-segment points if a is higher than b
+  if (a>b){
+    int c=a;
+    a=b;
+    b=c;
+  }
+  int indxMutA = a;
+  int indxMutB = b;
+
+  //Swapping Algorithm
+  while(indxMutA<indxMutB){
+    int custID = individu->kromosom[indxMutA];
+    individu->kromosom[indxMutA] = individu->kromosom[indxMutB];
+    individu->kromosom[indxMutB] = custID;
+    indxMutA++;indxMutB--;
+  }
 }
 
 OrderData readOrderData(Config config){

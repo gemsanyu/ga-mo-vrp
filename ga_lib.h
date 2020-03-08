@@ -43,6 +43,7 @@ Customer* create1DArrayCustomer(int size);
 RouteSet decodeKromosom(Config config, int *kromosom, OrderData orderData);
 Individu initIndividuRandom(int nCust);
 pair<Individu,Individu> orderCrossover(Config config, pair<Individu,Individu> parents);
+void rsMutation(Config config, Individu *individu);
 OrderData readOrderData(Config config);
 Individu* selectionNSGA2(Config config, Individu *population);
 void sortCrowdingDistance(Individu *population, int populationSize);
