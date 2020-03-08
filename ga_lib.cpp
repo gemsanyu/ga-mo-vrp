@@ -87,7 +87,7 @@ Individu orderCrossover_(Config config, Individu parentA, Individu parentB){
     a=b;
     b=c;
   }
-
+  
   /*
     copy parentA segment (a,b) to offspring segment(a,b)
   */
@@ -102,15 +102,16 @@ Individu orderCrossover_(Config config, Individu parentA, Individu parentB){
 
   /*
     and then add parentB's gens
-    not yet contained by the offspring to offspring
+    not yet contained by the offspring
   */
   int ofIdx=b+1;
-  for (int genBIdx=b+1;genBIdx<a;genBIdx = (genBIdx+1)%config.nCust){
+  for (int genBIdx=b+1;ofIdx<a || ofIdx>b;genBIdx = (genBIdx+1)%config.nCust){
     int gen = parentB.kromosom[genBIdx];
     if (genExistFlag[gen]){
       continue;
     }
     offspring.kromosom[ofIdx]=gen;
+    genExistFlag[gen]=true;
     ofIdx = (ofIdx+1)%config.nCust;
   }
 
@@ -121,6 +122,7 @@ pair<Individu,Individu> orderCrossover(Config config, pair<Individu,Individu> pa
   pair<Individu,Individu> offs;
   offs.first = orderCrossover_(config, parents.first, parents.second);
   offs.second = orderCrossover_(config, parents.second, parents.first);
+  return offs;
 }
 
 OrderData readOrderData(Config config){

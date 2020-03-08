@@ -1,3 +1,4 @@
+#include<algorithm>
 #include<iostream>
 
 #include"ga_lib.h"
@@ -21,7 +22,7 @@ int main(int argc, char **argv){
     population[i].routeSet = decodeKromosom(config, population[i].kromosom, orderData);
     calculateFitness(&population[i]);
   }
-
+  sort(population, population+config.N, cmpIndividuFitness);
 
   /*
     Start the GA
@@ -31,10 +32,9 @@ int main(int argc, char **argv){
     is less than the threshold
     for 100 consecutive iterations
   */
-  int sameFitnessCount = 0;
-  Individu bestIndividu;
-  for (int iter=0;iter<config.maxIter;iter++){
-
-  }
-
+  // int sameFitnessCount = 0;
+  // Individu bestIndividu;
+  // for (int iter=0;iter<config.maxIter;iter++){
+  //
+  // }
 }
