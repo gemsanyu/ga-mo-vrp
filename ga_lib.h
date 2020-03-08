@@ -47,7 +47,7 @@ void rsMutation(Config config, Individu *individu);
 OrderData readOrderData(Config config);
 Individu* selectionNSGA2(Config config, Individu *population);
 void sortCrowdingDistance(Individu *population, int populationSize);
-int spinRouletteWheel(double *probs);
+int spinRouletteWheel(double *probs, int probSize);
 
 
 #endif

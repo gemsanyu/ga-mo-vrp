@@ -1,4 +1,4 @@
-int spinRouletteWheel(double *probs, int Probsize){ 
+int spinRouletteWheel(double *probs, int probSize){ 
 	float 	select; 	// Variable Random Number 
 	int 	result ; 	// Variable Result
 	int c, r, z;	 	//variable batas
