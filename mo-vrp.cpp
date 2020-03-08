@@ -11,7 +11,9 @@ int main(int argc, char **argv){
 
   /*
     Initializing Population of N individu
-    initialize by random shuffes
+    initialize by random shuffes and greedy
+    but the greedy is not implemented yet :D
+    after initialization, evaluate and then sort by fitnes value
   */
   Individu *population = create1DArrayIndividu(config.N);
   for(int i=0;i<config.N;i++){
@@ -19,6 +21,7 @@ int main(int argc, char **argv){
     population[i].routeSet = decodeKromosom(config, population[i].kromosom, orderData);
     calculateFitness(&population[i]);
   }
+
 
   /*
     Start the GA
@@ -31,7 +34,7 @@ int main(int argc, char **argv){
   int sameFitnessCount = 0;
   Individu bestIndividu;
   for (int iter=0;iter<config.maxIter;iter++){
-    
+
   }
 
 }
