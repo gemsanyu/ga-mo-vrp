@@ -7,6 +7,7 @@
 #include<string>
 #include<utility>
 #include<random>
+#include <ctime>
 
 #include"ga_lib.h"
 #include"helper_lib.h"
