@@ -33,6 +33,7 @@ struct OrderData{
 
 void calculateFitness(Individu *individu);
 bool cmpIndividuFitness(Individu a, Individu b);
+int spinRouletteWheel(double *probs);
 Individu* create1DArrayIndividu(int size);
 Customer* create1DArrayCustomer(int size);
 RouteSet decodeKromosom(Config config, int *kromosom, OrderData orderData);
