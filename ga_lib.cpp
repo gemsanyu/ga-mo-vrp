@@ -76,6 +76,10 @@ pair<Individu,Individu> orderCrossover(pair<Individu,Individu> parents){
 
 }
 
+void rsmMutation(Individu *Individu){
+  
+}
+
 Individu orderCrossover_(Individu parentA, Individu parentB){
 
 }

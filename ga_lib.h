@@ -37,6 +37,7 @@ Customer* create1DArrayCustomer(int size);
 RouteSet decodeKromosom(Config config, int *kromosom, OrderData orderData);
 Individu initIndividuRandom(int nCust);
 pair<Individu,Individu> orderCrossover(pair<Individu,Individu> parents);
+void rsmMutation(Individu *individu);
 OrderData readOrderData(Config config);
 
 #endif
