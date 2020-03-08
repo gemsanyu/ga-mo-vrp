@@ -9,6 +9,14 @@
 
 using namespace std;
 
+bool* create1DArrayBool(int sizeX){
+  bool* array = (bool*) malloc(sizeX * sizeof(bool));
+  for (int i=0;i<sizeX;i++){
+    array[i]=false;
+  }
+  return array;
+}
+
 int* create1DArrayInt(int sizeX){
     int*  array =(int*) malloc(sizeX * sizeof(int));
     return array;

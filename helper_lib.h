@@ -17,6 +17,7 @@ struct Coordinate{
   double x,y;
 };
 
+bool* create1DArrayBool(int sizeX);
 int* create1DArrayInt(int sizeX);
 double euclideanDistance(Coordinate a, Coordinate b);
 Config readConfig(string configFileName);

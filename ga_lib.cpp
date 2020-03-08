@@ -22,6 +22,10 @@ void calculateFitness(Individu *individu){
   individu->fitnessValue = fitnessValue;
 }
 
+bool cmpIndividuFitness(Individu a, Individu b){
+  return a.fitnessValue < b.fitnessValue;
+}
+
 Individu* create1DArrayIndividu(int size){
   Individu *array = new Individu[size];
   return array;
@@ -72,16 +76,51 @@ Individu initIndividuRandom(int nCust){
   return individu;
 }
 
-pair<Individu,Individu> orderCrossover(pair<Individu,Individu> parents){
+Individu orderCrossover_(Config config, Individu parentA, Individu parentB){
+  /*
+    First randomize segment points a and b
+  */
+  int a=rand()%config.nCust;
+  int b=rand()%config.nCust;
+  if (a>b){
+    int c=a;
+    a=b;
+    b=c;
+  }
 
+  /*
+    copy parentA segment (a,b) to offspring segment(a,b)
+  */
+  bool *genExistFlag = create1DArrayBool(config.nCust);
+  Individu offspring;
+  offspring.kromosom = create1DArrayInt(config.nCust);
+  for (int c=a;c<=b;c++){
+    int custID = parentA.kromosom[c];
+    offspring.kromosom[c] = custID;
+    genExistFlag[custID] = true;
+  }
+
+  /*
+    and then add parentB's gens
+    not yet contained by the offspring to offspring
+  */
+  int ofIdx=b+1;
+  for (int genBIdx=b+1;genBIdx<a;genBIdx = (genBIdx+1)%config.nCust){
+    int gen = parentB.kromosom[genBIdx];
+    if (genExistFlag[gen]){
+      continue;
+    }
+    offspring.kromosom[ofIdx]=gen;
+    ofIdx = (ofIdx+1)%config.nCust;
+  }
+
+  return offspring;
 }
 
-void rsmMutation(Individu *Individu){
-  
-}
-
-Individu orderCrossover_(Individu parentA, Individu parentB){
-
+pair<Individu,Individu> orderCrossover(Config config, pair<Individu,Individu> parents){
+  pair<Individu,Individu> offs;
+  offs.first = orderCrossover_(config, parents.first, parents.second);
+  offs.second = orderCrossover_(config, parents.second, parents.first);
 }
 
 OrderData readOrderData(Config config){
