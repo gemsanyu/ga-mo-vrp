@@ -14,9 +14,9 @@
 
 void calculateFitness(Individu *individu){
   double totalDist = 0;
-  int routeCount=individu->routeSet.routes.size();
+  int routeCount=individu->routeSet->routes.size();
   for (int r=0;r<routeCount;r++){
-    totalDist += individu->routeSet.distances[r];
+    totalDist += individu->routeSet->distances[r];
   }
   double fitnessValue = 1.0/(600.0*totalDist + 10000.0*(double)routeCount);
   individu->totalDist = totalDist;
@@ -24,20 +24,20 @@ void calculateFitness(Individu *individu){
   individu->fitnessValue = fitnessValue;
 }
 
-bool cmpIndividuFitness(Individu a, Individu b){
-  return a.fitnessValue < b.fitnessValue;
+bool cmpIndividuFitness(Individu* a, Individu* b){
+  return a->fitnessValue < b->fitnessValue;
 }
 
-bool cmpIndividuCrowdingDistance(Individu a, Individu b){
-  return a.crowdingDistance > b.crowdingDistance;
+bool cmpIndividuCrowdingDistance(Individu* a, Individu* b){
+  return a->crowdingDistance > b->crowdingDistance;
 }
 
-bool cmpIndividuTotalDist(Individu a, Individu b){
-  return a.totalDist < b.totalDist;
+bool cmpIndividuTotalDist(Individu* a, Individu* b){
+  return a->totalDist < b->totalDist;
 }
 
-bool cmpIndividuRouteCount(Individu a, Individu b){
-  return a.routeCount < b.routeCount;
+bool cmpIndividuRouteCount(Individu* a, Individu* b){
+  return a->routeCount < b->routeCount;
 }
 
 Individu* create1DArrayIndividu(int size){
@@ -50,54 +50,60 @@ Customer* create1DArrayCustomer(int size){
   return array;
 }
 
-RouteSet decodeKromosom(Config config, int *kromosom, OrderData orderData){
-  RouteSet routeSet;
+RouteSet *decodeKromosom(Config *config, int *kromosom, OrderData *orderData){
+  RouteSet* routeSet = new RouteSet;
   std::vector<int> route;
   double totalDist=0;
   int totalOrder=0;
-  Coordinate lastCoord=orderData.depot;
-  for (int k=0;k<config.nCust;k++){
+  Coordinate lastCoord=orderData->depot;
+  for (int k=0;k<config->nCust;k++){
     int custID = kromosom[k];
-    double dist = euclideanDistance(lastCoord, orderData.customerData[custID].coordinate);
-    double distToDepot = euclideanDistance(orderData.customerData[custID].coordinate, orderData.depot);
-    int odSize = orderData.customerData[custID].orderSize;
-    if ((totalOrder+odSize>config.maxCap) || (totalDist+dist+distToDepot>config.maxDist)){
-      routeSet.routes.push_back(route);
-      totalDist += euclideanDistance(lastCoord, orderData.depot);
-      routeSet.distances.push_back(totalDist);
+    double dist = euclideanDistance(lastCoord, orderData->customerData[custID].coordinate);
+    double distToDepot = euclideanDistance(orderData->customerData[custID].coordinate, orderData->depot);
+    int odSize = orderData->customerData[custID].orderSize;
+    if ((totalOrder+odSize>config->maxCap) || (totalDist+dist+distToDepot>config->maxDist)){
+      routeSet->routes.push_back(route);
+      totalDist += euclideanDistance(lastCoord, orderData->depot);
+      routeSet->distances.push_back(totalDist);
       route.clear();
       totalDist=0;
       totalOrder=0;
-      lastCoord=orderData.depot;
-      dist = euclideanDistance(lastCoord, orderData.customerData[custID].coordinate);
+      lastCoord=orderData->depot;
+      dist = euclideanDistance(lastCoord, orderData->customerData[custID].coordinate);
     }
     route.push_back(custID);
     totalDist += dist;
-    totalOrder += orderData.customerData[custID].orderSize;
-    lastCoord = orderData.customerData[custID].coordinate;
+    totalOrder += orderData->customerData[custID].orderSize;
+    lastCoord = orderData->customerData[custID].coordinate;
   }
-  routeSet.routes.push_back(route);
-  totalDist += euclideanDistance(lastCoord, orderData.depot);
-  routeSet.distances.push_back(totalDist);
+  routeSet->routes.push_back(route);
+  totalDist += euclideanDistance(lastCoord, orderData->depot);
+  routeSet->distances.push_back(totalDist);
   return routeSet;
 }
 
-Individu initIndividuRandom(int nCust){
-  Individu individu;
-  individu.kromosom = create1DArrayInt(nCust);
+Individu* initIndividuRandom(int nCust){
+  Individu* individu = new Individu;
+  individu->kromosom = create1DArrayInt(nCust);
   for(int i=0;i<nCust;i++){
-    individu.kromosom[i]=i;
+    individu->kromosom[i]=i;
   }
-  random_shuffle(individu.kromosom, individu.kromosom+nCust);
+  random_shuffle(individu->kromosom, individu->kromosom+nCust);
   return individu;
 }
 
-Individu orderCrossover_(Config config, Individu parentA, Individu parentB){
+bool isDominate(Individu* idvA, Individu* idvB){
+  return (idvA->totalDist <= idvB->totalDist) &&
+  (idvA->routeCount<=idvB->routeCount) &&
+  ((idvA->totalDist<idvB->totalDist) || (idvA->routeCount<idvB->routeCount));
+}
+
+Individu* orderCrossover_(Config *config, Individu *parentA, Individu *parentB){
   /*
     First randomize segment points a and b
   */
-  int a=rand()%config.nCust;
-  int b=rand()%config.nCust;
+  int a=rand()%config->nCust;
+  int b=rand()%config->nCust;
   if (a>b){
     int c=a;
     a=b;
@@ -107,12 +113,12 @@ Individu orderCrossover_(Config config, Individu parentA, Individu parentB){
   /*
     copy parentA segment (a,b) to offspring segment(a,b)
   */
-  bool *genExistFlag = create1DArrayBool(config.nCust);
-  Individu offspring;
-  offspring.kromosom = create1DArrayInt(config.nCust);
+  bool *genExistFlag = create1DArrayBool(config->nCust);
+  Individu* offspring = new Individu;
+  offspring->kromosom = create1DArrayInt(config->nCust);
   for (int c=a;c<=b;c++){
-    int custID = parentA.kromosom[c];
-    offspring.kromosom[c] = custID;
+    int custID = parentA->kromosom[c];
+    offspring->kromosom[c] = custID;
     genExistFlag[custID] = true;
   }
 
@@ -121,32 +127,32 @@ Individu orderCrossover_(Config config, Individu parentA, Individu parentB){
     not yet contained by the offspring
   */
   int ofIdx=b+1;
-  for (int genBIdx=b+1;ofIdx<a || ofIdx>b;genBIdx = (genBIdx+1)%config.nCust){
-    int gen = parentB.kromosom[genBIdx];
+  for (int genBIdx=b+1;ofIdx<a || ofIdx>b;genBIdx = (genBIdx+1)%config->nCust){
+    int gen = parentB->kromosom[genBIdx];
     if (genExistFlag[gen]){
       continue;
     }
-    offspring.kromosom[ofIdx]=gen;
+    offspring->kromosom[ofIdx]=gen;
 
     genExistFlag[gen]=true;
-    ofIdx = (ofIdx+1)%config.nCust;
+    ofIdx = (ofIdx+1)%config->nCust;
   }
   return offspring;
 }
 
-pair<Individu,Individu> orderCrossover(Config config, pair<Individu,Individu> parents){
-  pair<Individu,Individu> offs;
+pair<Individu*,Individu*> orderCrossover(Config *config, pair<Individu*,Individu*> parents){
+  pair<Individu*,Individu*> offs;
   offs.first = orderCrossover_(config, parents.first, parents.second);
   offs.second = orderCrossover_(config, parents.second, parents.first);
   return offs;
 }
 
-void rsMutation(Config config, Individu *individu){
+void rsMutation(Config *config, Individu *individu){
   /*
     First randomize Mutation-segment points a and b
   */
-  int a=rand()%config.nCust;  
-  int b=rand()%config.nCust;
+  int a=rand()%config->nCust;
+  int b=rand()%config->nCust;
   //Switch Mutation-segment points if a is higher than b
   if (a>b){
     int c=a;
@@ -165,15 +171,15 @@ void rsMutation(Config config, Individu *individu){
   }
 }
 
-OrderData readOrderData(Config config){
-  ifstream dataFile(config.fileName);
-  OrderData odData;
-  odData.customerData = create1DArrayCustomer(config.nCust);
-  dataFile >> odData.depot.x >> odData.depot.y;
-  for (int c=0;c<config.nCust;c++){
-    dataFile >> odData.customerData[c].coordinate.x;
-    dataFile >> odData.customerData[c].coordinate.y;
-    dataFile >> odData.customerData[c].orderSize;
+OrderData* readOrderData(Config *config){
+  ifstream dataFile(config->fileName);
+  OrderData* odData = new OrderData;
+  odData->customerData = create1DArrayCustomer(config->nCust);
+  dataFile >> odData->depot.x >> odData->depot.y;
+  for (int c=0;c<config->nCust;c++){
+    dataFile >> odData->customerData[c].coordinate.x;
+    dataFile >> odData->customerData[c].coordinate.y;
+    dataFile >> odData->customerData[c].orderSize;
   }
   dataFile.close();
   return odData;
@@ -181,14 +187,124 @@ OrderData readOrderData(Config config){
 
 
 /*
+  generate pareto front layers
+  based on dominationcount
+*/
+vector<vector<Individu*>> getParetoFronts(vector<Individu*>* population){
+  int populationSize=population->size();
+  for(int i=0;i<populationSize;i++){
+    population->at(i)->dominatedCount=0;
+    population->at(i)->dominatedIndividuVec.clear();
+  }
+
+  /*
+    count domination
+    and take not which dominated which
+  */
+  for(int i=0;i<populationSize;i++){
+    cout <<population->at(i)<<"\n";
+  }
+  cout<<"++++++++++++++++++++++++++++++==\n";
+
+  for(int i=0;i<populationSize;i++){
+    for(int j=0;j<populationSize;j++){
+      if (i==j){
+        continue;
+      }
+      if (isDominate(population->at(i),population->at(j))){
+        population->at(j)->dominatedCount++;
+        population->at(i)->dominatedIndividuVec.push_back(population->at(j));
+        cout<<i<<" "<<j<<"\n";
+        cout<<population->at(i)->dominatedIndividuVec.back()<<" "<<population->at(j)<<"\n";
+      }
+    }
+  }
+  cout<<"--------------------------\n";
+  // cout<<population->at(1)->dominatedIndividuVec[0]->dominatedCount<<'\n';
+  // cout<<population->at(0)->dominatedCount<<'\n';
+  // population->at(1)->dominatedIndividuVec[0]->dominatedCount--;
+  // cout<<population->at(1)->dominatedIndividuVec[0]->dominatedCount<<'\n';
+  // cout<<population->at(0)->dominatedCount<<'\n';
+  // vector<Individu*>* pf = new vector<Individu*>;
+  // pf->push_back(population->at(0));
+  // pf->at(0)->dominatedCount--;
+  // cout<<population->at(1)->dominatedIndividuVec[0]->dominatedCount<<'\n';
+  // cout<<population->at(0)->dominatedCount<<'\n';
+
+  /*
+    start from the pareto optimal front
+    which consists of solutions with dominatedCount = 0
+  */
+  vector<Individu*>* paretoFront = new vector<Individu*>;
+  for (int i=populationSize-1;i>=0;i--){
+    if(population->at(i)->dominatedCount==0){
+      paretoFront->push_back(population->at(i));
+      population->erase(population->begin()+i);
+    }
+  }
+
+  vector<vector<Individu*>> paretoFronts;
+
+  /*
+    remove the pareto optimal front from the population
+    and get the next pareto optimal front from the population
+    repeat
+  */
+  while(!population->empty()){
+    paretoFronts.push_back(*paretoFront);
+    vector<Individu*>* lastParetoFront = paretoFront;
+    paretoFront = new vector<Individu*>;
+    for(int i=0;i<lastParetoFront->size();i++){
+      for(int j=0;j<lastParetoFront->at(i)->dominatedIndividuVec.size();j++){
+        lastParetoFront->at(i)->dominatedIndividuVec[j]->dominatedCount--;
+      }
+    }
+
+    populationSize=population->size();
+    for (int i=populationSize-1;i>=0;i--){
+      if(population->at(i)->dominatedCount==0){
+        paretoFront->push_back(population->at(i));
+        population->erase(population->begin()+i);
+      }
+    }
+  }
+  return paretoFronts;
+}
+
+/*
+  select N individus from current population
+  which have old population + offsprings
+  by NSGAII
+*/
+vector<Individu*> selectionNSGA2(Config *config, vector<Individu*>* population){
+  vector<Individu*> newPopulation;
+  vector<vector<Individu*>> paretoFronts = getParetoFronts(population);
+
+  bool newPopulationFull=false;
+  for(int i=0;i<paretoFronts.size() && !newPopulationFull;i++){
+    sortCrowdingDistance(paretoFronts[i]);
+    for(int j=0;j<paretoFronts[i].size();j++){
+      if(newPopulation.size()==config->N){
+        newPopulationFull;
+        break;
+      }
+      newPopulation.push_back(paretoFronts[i][j]);
+    }
+  }
+  
+  return newPopulation;
+}
+
+/*
   sort sub population p'
   which |p'| + |new_pop| > config.N
   so we can get the top by crowding distance
   and only add those top individus to the new_pop
 */
-void sortCrowdingDistance(Individu *population, int populationSize){
+void sortCrowdingDistance(vector<Individu*> population){
+  int populationSize = population.size();
   for(int i=0;i<populationSize;i++){
-    population[i].crowdingDistance=0;
+    population[i]->crowdingDistance=0;
   }
 
   /*
@@ -198,17 +314,17 @@ void sortCrowdingDistance(Individu *population, int populationSize){
   double maxTotDist=numeric_limits<double>::min(), minTotDist=numeric_limits<double>::max();
   double maxRouteCount=numeric_limits<double>::min(), minRouteCount=numeric_limits<double>::max();
   for(int i=0;i<populationSize;i++){
-    if (population[i].totalDist > maxTotDist){
-      maxTotDist = population[i].totalDist;
+    if (population[i]->totalDist > maxTotDist){
+      maxTotDist = population[i]->totalDist;
     }
-    if (population[i].totalDist < minTotDist){
-      minTotDist = population[i].totalDist;
+    if (population[i]->totalDist < minTotDist){
+      minTotDist = population[i]->totalDist;
     }
-    if (population[i].routeCount > maxRouteCount){
-      maxRouteCount = population[i].routeCount;
+    if (population[i]->routeCount > maxRouteCount){
+      maxRouteCount = population[i]->routeCount;
     }
-    if (population[i].routeCount < minRouteCount){
-      minRouteCount = population[i].routeCount;
+    if (population[i]->routeCount < minRouteCount){
+      minRouteCount = population[i]->routeCount;
     }
   }
   spanTotalDist += (maxTotDist-minTotDist);
@@ -217,21 +333,21 @@ void sortCrowdingDistance(Individu *population, int populationSize){
   /*
     sort by crowdingDistance per objective function
   */
-  sort(population, population+populationSize, cmpIndividuTotalDist);
-  population[0].crowdingDistance=numeric_limits<double>::max();
-  population[populationSize-1].crowdingDistance=numeric_limits<double>::max();
+  sort(population.begin(), population.end(), cmpIndividuTotalDist);
+  population[0]->crowdingDistance=numeric_limits<double>::max();
+  population[populationSize-1]->crowdingDistance=numeric_limits<double>::max();
   for (int i=1;i<populationSize-1;i++){
-    population[i].crowdingDistance += (population[i+1].totalDist-population[i-1].totalDist)/spanTotalDist;
+    population[i]->crowdingDistance += (population[i+1]->totalDist-population[i-1]->totalDist)/spanTotalDist;
   }
 
-  sort(population, population+populationSize, cmpIndividuRouteCount);
-  population[0].crowdingDistance=numeric_limits<double>::max();
-  population[populationSize-1].crowdingDistance=numeric_limits<double>::max();
+  sort(population.begin(), population.end(), cmpIndividuRouteCount);
+  population[0]->crowdingDistance=numeric_limits<double>::max();
+  population[populationSize-1]->crowdingDistance=numeric_limits<double>::max();
   for (int i=1;i<populationSize-1;i++){
-    population[i].crowdingDistance += (population[i+1].routeCount-population[i-1].routeCount)/spanRouteCount;
+    population[i]->crowdingDistance += (population[i+1]->routeCount-population[i-1]->routeCount)/spanRouteCount;
   }
 
-  sort(population, population+populationSize, cmpIndividuCrowdingDistance);
+  sort(population.begin(), population.end(), cmpIndividuCrowdingDistance);
 }
 
 // Roulette Wheel

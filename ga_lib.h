@@ -14,13 +14,13 @@ struct RouteSet{
 
 struct Individu{
   int *kromosom;
-  RouteSet routeSet;
+  RouteSet *routeSet;
   double totalDist;
   int routeCount;
   double fitnessValue;
   double crowdingDistance;
-  int dominationCount;
   int dominatedCount;
+  vector<Individu*> dominatedIndividuVec;
 };
 
 struct Customer{
@@ -34,19 +34,20 @@ struct OrderData{
 };
 
 void calculateFitness(Individu *individu);
-bool cmpIndividuFitness(Individu a, Individu b);
-bool cmpIndividuCrowdingDistance(Individu a, Individu b);
-bool cmpIndividuTotalDist(Individu a, Individu b);
-bool cmpIndividuRouteCount(Individu a, Individu b);
+bool cmpIndividuFitness(Individu* a, Individu* b);
+bool cmpIndividuCrowdingDistance(Individu* a, Individu* b);
+bool cmpIndividuTotalDist(Individu* a, Individu* b);
+bool cmpIndividuRouteCount(Individu* a, Individu* b);
 Individu* create1DArrayIndividu(int size);
 Customer* create1DArrayCustomer(int size);
-RouteSet decodeKromosom(Config config, int *kromosom, OrderData orderData);
-Individu initIndividuRandom(int nCust);
-pair<Individu,Individu> orderCrossover(Config config, pair<Individu,Individu> parents);
+RouteSet* decodeKromosom(Config *config, int *kromosom, OrderData *orderData);
+Individu* initIndividuRandom(int nCust);
+bool isDominate(Individu* idvA, Individu* idvB);
+pair<Individu,Individu> orderCrossover(Config &config, pair<Individu,Individu> parents);
 void rsMutation(Config config, Individu *individu);
-OrderData readOrderData(Config config);
-Individu* selectionNSGA2(Config config, Individu *population);
-void sortCrowdingDistance(Individu *population, int populationSize);
+OrderData* readOrderData(Config *config);
+vector<Individu*> selectionNSGA2(Config *config, vector<Individu*>* population);
+void sortCrowdingDistance(vector<Individu*>population);
 int spinRouletteWheel(double *probs, int probSize);
 
 
