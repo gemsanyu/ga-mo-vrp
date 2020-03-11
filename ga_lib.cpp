@@ -25,7 +25,7 @@ void calculateFitness(Individu *individu){
 }
 
 bool cmpIndividuFitness(Individu* a, Individu* b){
-  return a->fitnessValue < b->fitnessValue;
+  return a->fitnessValue > b->fitnessValue;
 }
 
 bool cmpIndividuCrowdingDistance(Individu* a, Individu* b){
@@ -92,6 +92,22 @@ Individu* initIndividuRandom(int nCust){
   return individu;
 }
 
+Individu* initIndividuGreedy(Config* config, OrderData* orderData){
+  int* kromosom = create1DArrayInt(config->nCust);
+  vector<int> custIdx;
+  for(int i=0;i<config->nCust;i++){
+    custIdx.push_back(i);
+  }
+
+  int servedCustCount = 0;
+  double totalDist=0;
+  int totalOrder=0;
+  Coordinate lastCoord=orderData->depot;
+  while(servedCustCount<config->nCust){
+
+  }
+}
+
 bool isDominate(Individu* idvA, Individu* idvB){
   return (idvA->totalDist <= idvB->totalDist) &&
   (idvA->routeCount<=idvB->routeCount) &&
@@ -126,8 +142,8 @@ Individu* orderCrossover_(Config *config, Individu *parentA, Individu *parentB){
     and then add parentB's gens
     not yet contained by the offspring
   */
-  int ofIdx=b+1;
-  for (int genBIdx=b+1;ofIdx<a || ofIdx>b;genBIdx = (genBIdx+1)%config->nCust){
+  int ofIdx=(b+1)%config->nCust;
+  for (int genBIdx=(b+1)%config->nCust;ofIdx<a || ofIdx>b;genBIdx = (genBIdx+1)%config->nCust){
     int gen = parentB->kromosom[genBIdx];
     if (genExistFlag[gen]){
       continue;
@@ -137,6 +153,7 @@ Individu* orderCrossover_(Config *config, Individu *parentA, Individu *parentB){
     genExistFlag[gen]=true;
     ofIdx = (ofIdx+1)%config->nCust;
   }
+  delete[] genExistFlag;
   return offspring;
 }
 
@@ -186,30 +203,39 @@ OrderData* readOrderData(Config *config){
 }
 
 // Roulette Wheel
-int spinRouletteWheel(double *probs, int probSize){
-	float 	select; 	// Variable Random Number
-	int 	result ; 	// Variable Result
-	int c, r, z;	 	//variable batas
-	srand(time(0));
+int spinRouletteWheel_(vector<double> probs){
+	double 	select; 	// Variable Random Number
+
 	//Random Number
 	select = (double) rand()/RAND_MAX;
-
-			// NORMALISASI NILAI FITNESS
-// diketahui fitness 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0
-//	for (c = 0; c< Probsize; c++){
-//		probs [c] = (double) (c+1)/10;
-//	}
-	r = 0;
-	c = 0;
-	z = 0;
+	int c = 0;
 	//code selected colom
-	while(c<10){
-		if (select - probs[c] < 0){
-			result = c;
-			z++;
+	while(c<probs.size()){
+    select-=probs[c];
+		if (select <= 0){
+			break;
 		}
 		c++;
 	}
-	return result;
+	return c;
+}
 
+vector<int> spinRouletteWheel(vector<Individu*>* population, int spinCount){
+  vector<int> result;
+  vector<double> probs;
+  double sumProb=0;
+  for(int i=0;i<population->size();i++){
+    sumProb+=population->at(i)->fitnessValue;
+    probs.push_back(population->at(i)->fitnessValue);
+  }
+
+  for(int i=0;i<population->size();i++){
+    probs[i]/=sumProb;
+  }
+
+  for(int i=0;i<spinCount;i++){
+    int res=spinRouletteWheel_(probs);
+    result.push_back(res);
+  }
+  return result;
 }

@@ -42,13 +42,13 @@ Individu* create1DArrayIndividu(int size);
 Customer* create1DArrayCustomer(int size);
 RouteSet* decodeKromosom(Config *config, int *kromosom, OrderData *orderData);
 Individu* initIndividuRandom(int nCust);
+Individu* initIndividuGreedy(Config* config, OrderData* orderData);
 bool isDominate(Individu* idvA, Individu* idvB);
-pair<Individu,Individu> orderCrossover(Config &config, pair<Individu,Individu> parents);
-void rsMutation(Config config, Individu *individu);
+pair<Individu*,Individu*> orderCrossover(Config* config, pair<Individu*,Individu*> parents);
+void rsMutation(Config* config, Individu *individu);
 OrderData* readOrderData(Config *config);
 vector<Individu*> selectionNSGA2(Config *config, vector<Individu*>* population);
 void sortCrowdingDistance(vector<Individu*>population);
-int spinRouletteWheel(double *probs, int probSize);
-
+vector<int> spinRouletteWheel(vector<Individu*>* population, int spinCount);
 
 #endif

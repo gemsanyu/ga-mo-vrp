@@ -1,15 +1,8 @@
 #include<algorithm>
-#include<fstream>
 #include<iostream>
 #include<limits>
-#include<sstream>
-#include<stdlib.h>
-#include<string>
-#include<utility>
-#include<random>
 
 #include"ga_lib.h"
-#include"helper_lib.h"
 
 /*
   generate pareto front layers
@@ -27,11 +20,6 @@ vector<vector<Individu*>> getParetoFronts(vector<Individu*>* population){
     and take not which dominated which
   */
   for(int i=0;i<populationSize;i++){
-    cout <<population->at(i)<<"\n";
-  }
-  cout<<"++++++++++++++++++++++++++++++==\n";
-
-  for(int i=0;i<populationSize;i++){
     for(int j=0;j<populationSize;j++){
       if (i==j){
         continue;
@@ -39,23 +27,10 @@ vector<vector<Individu*>> getParetoFronts(vector<Individu*>* population){
       if (isDominate(population->at(i),population->at(j))){
         population->at(j)->dominatedCount++;
         population->at(i)->dominatedIndividuVec.push_back(population->at(j));
-        cout<<i<<" "<<j<<"\n";
-        cout<<population->at(i)->dominatedIndividuVec.back()<<" "<<population->at(j)<<"\n";
       }
     }
   }
-  cout<<"--------------------------\n";
-  // cout<<population->at(1)->dominatedIndividuVec[0]->dominatedCount<<'\n';
-  // cout<<population->at(0)->dominatedCount<<'\n';
-  // population->at(1)->dominatedIndividuVec[0]->dominatedCount--;
-  // cout<<population->at(1)->dominatedIndividuVec[0]->dominatedCount<<'\n';
-  // cout<<population->at(0)->dominatedCount<<'\n';
-  // vector<Individu*>* pf = new vector<Individu*>;
-  // pf->push_back(population->at(0));
-  // pf->at(0)->dominatedCount--;
-  // cout<<population->at(1)->dominatedIndividuVec[0]->dominatedCount<<'\n';
-  // cout<<population->at(0)->dominatedCount<<'\n';
-
+  
   /*
     start from the pareto optimal front
     which consists of solutions with dominatedCount = 0

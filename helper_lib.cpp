@@ -10,7 +10,8 @@
 using namespace std;
 
 bool* create1DArrayBool(int sizeX){
-  bool* array = (bool*) malloc(sizeX * sizeof(bool));
+  // bool* array = (bool*) malloc(sizeX * sizeof(bool));
+  bool* array = new bool[sizeX];
   for (int i=0;i<sizeX;i++){
     array[i]=false;
   }
@@ -18,7 +19,8 @@ bool* create1DArrayBool(int sizeX){
 }
 
 int* create1DArrayInt(int sizeX){
-    int*  array =(int*) malloc(sizeX * sizeof(int));
+    // int*  array =(int*) malloc(sizeX * sizeof(int));
+    int* array = new int[sizeX];
     return array;
 }
 
