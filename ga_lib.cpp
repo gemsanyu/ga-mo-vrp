@@ -2,12 +2,12 @@
 #include<fstream>
 #include<iostream>
 #include<limits>
+#include<omp.h>
+#include<random>
 #include<sstream>
 #include<stdlib.h>
 #include<string>
 #include<utility>
-#include<random>
-#include <ctime>
 
 #include"ga_lib.h"
 #include"helper_lib.h"
@@ -146,8 +146,15 @@ Individu* initIndividuGreedy(Config* config, OrderData* orderData){
   int totalOrder=0;
   Coordinate lastCoord=orderData->depot;
   while(!custsIdx.empty()){
-    int closestIdx = findNearestCustIdx(config, orderData, &custsIdx, &lastCoord,
-      totalOrder, totalDist);
+    //randomize the first customer
+    int closestIdx;
+    if (servedCustCount == 0){
+      closestIdx = rand()%config->nCust;
+    } else {
+      closestIdx = findNearestCustIdx(config, orderData, &custsIdx, &lastCoord,
+        totalOrder, totalDist);
+    }
+
     /*
       if no feasible customer left to serve
       reset everything

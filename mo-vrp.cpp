@@ -1,17 +1,24 @@
 #include<algorithm>
+#include<iomanip>
 #include<iostream>
+#include<omp.h>
+#include<time.h>
 
 #include"ga_lib.h"
 #include"helper_lib.h"
 using namespace std;
 
 int main(int argc, char **argv){
+
   ios_base::sync_with_stdio(false);
 
   char *configFileName = argv[1];
   Config *config = readConfig(configFileName);
+  config->numThreads = atoi(argv[2]);
   OrderData *orderData = readOrderData(config);
 
+  double start,end;
+  start = omp_get_wtime();
   /*
     Initializing Population of N individu
     initialize by random shuffes and greedy
@@ -19,6 +26,7 @@ int main(int argc, char **argv){
     after initialization, evaluate and then sort by fitnes value
   */
   vector<Individu*> population;
+  #pragma omp parallel for num_threads (config->numThreads)
   for(int i=0;i<config->N;i++){
     Individu* newIdv;
     if (i%2==0){
@@ -26,11 +34,14 @@ int main(int argc, char **argv){
     } else {
       newIdv = initIndividuGreedy(config, orderData);
     }
+    newIdv->routeSet = decodeKromosom(config, newIdv->kromosom, orderData);
+    calculateFitness(newIdv);
+    #pragma omp critical
     population.push_back(newIdv);
-    population[i]->routeSet = decodeKromosom(config, population[i]->kromosom, orderData);
-    calculateFitness(population[i]);
   }
   sort(population.begin(), population.end(), cmpIndividuFitness);
+  end = omp_get_wtime();
+  double initTime = end-start;
 
   /*
     Start the GA
@@ -65,6 +76,7 @@ int main(int argc, char **argv){
       with complete pairs of the chosen parents doing odx crossover
     */
     int chosenParentSize=parentsIdx.size();
+    #pragma omp parallel for num_threads(config->numThreads)
     for(int p1=0;p1<chosenParentSize;p1++){
       int pIdx1 = parentsIdx[p1];
       Individu* parent1 = population[pIdx1];
@@ -74,7 +86,6 @@ int main(int argc, char **argv){
         pair<Individu*,Individu*> parentPair = make_pair(parent1,parent2);
 
         pair<Individu*,Individu*> offs = orderCrossover(config, parentPair);
-
         /*
           mutating offspring
         */
@@ -91,8 +102,11 @@ int main(int argc, char **argv){
         offs.second->routeSet = decodeKromosom(config, offs.second->kromosom, orderData);
         calculateFitness(offs.first);
         calculateFitness(offs.second);
-        population.push_back(offs.first);
-        population.push_back(offs.second);
+        #pragma omp critical
+        {
+          population.push_back(offs.first);
+          population.push_back(offs.second);
+        }
       }
     }
 
@@ -121,4 +135,15 @@ int main(int argc, char **argv){
     }
     cout<<iter+1<<" "<<bestFitness<<" "<<bestIndividu.routeCount<<" "<<bestIndividu.totalDist<<"\n";
   }
+  end = omp_get_wtime();
+  double totalTime = end-start;
+
+  cout<<"Obtained PF\n";
+  for(int i=0;i<population.size();i++){
+    cout<<fixed<<setprecision(8)<<"solution-"<<i<<": "<<population[i]->routeCount<<" "<<population[i]->totalDist<<"\n";
+  }
+  cout<<fixed<<setprecision(8)<<"Initial Population Generation Time: "<<initTime<<"\n";
+  cout<<fixed<<setprecision(8)<<"Total Time: "<<totalTime<<"\n";
+
+  
 }

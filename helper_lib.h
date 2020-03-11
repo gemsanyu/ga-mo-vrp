@@ -10,6 +10,7 @@ struct Config{
   double threshold;
   int maxIter, N, NP;
   double pc, pm;
+  int numThreads;
 };
 
 
