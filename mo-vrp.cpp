@@ -54,7 +54,7 @@ int main(int argc, char **argv){
   int sameFitnessCount = 0;
   Individu bestIndividu = *population[0];
   double bestFitness = bestIndividu.fitnessValue;
-  cout<<0<<" "<<bestFitness<<" "<<bestIndividu.routeCount<<" "<<bestIndividu.totalDist<<"\n";
+  // cout<<0<<" "<<bestFitness<<" "<<bestIndividu.routeCount<<" "<<bestIndividu.totalDist<<"\n";
   for (int iter=0;iter<config->maxIter && sameFitnessCount<100;iter++){
 
     /*
@@ -76,39 +76,43 @@ int main(int argc, char **argv){
       with complete pairs of the chosen parents doing odx crossover
     */
     int chosenParentSize=parentsIdx.size();
-    #pragma omp parallel for num_threads(config->numThreads)
-    for(int p1=0;p1<chosenParentSize;p1++){
-      int pIdx1 = parentsIdx[p1];
-      Individu* parent1 = population[pIdx1];
-      for(int p2=p1+1;p2<chosenParentSize;p2++){
-        int pIdx2 = parentsIdx[p2];
-        Individu* parent2 = population[pIdx2];
-        pair<Individu*,Individu*> parentPair = make_pair(parent1,parent2);
+    #pragma omp parallel num_threads(config->numThreads)
+    {
+      vector<Individu*> private_pop;
+      #pragma omp for nowait
+      for(int p1=0;p1<chosenParentSize;p1++){
+        int pIdx1 = parentsIdx[p1];
+        Individu* parent1 = population[pIdx1];
+        for(int p2=p1+1;p2<chosenParentSize;p2++){
+          int pIdx2 = parentsIdx[p2];
+          Individu* parent2 = population[pIdx2];
+          pair<Individu*,Individu*> parentPair = make_pair(parent1,parent2);
 
-        pair<Individu*,Individu*> offs = orderCrossover(config, parentPair);
-        /*
-          mutating offspring
-        */
-        double r=rand()/RAND_MAX;
-        if (r<config->pm){
-          rsMutation(config, offs.first);
-        }
+          pair<Individu*,Individu*> offs = orderCrossover(config, parentPair);
+          /*
+            mutating offspring
+          */
+          double r=rand()/RAND_MAX;
+          if (r<config->pm){
+            rsMutation(config, offs.first);
+          }
 
-        r=rand()/RAND_MAX;
-        if (r<config->pm){
-          rsMutation(config, offs.second);
-        }
-        offs.first->routeSet = decodeKromosom(config, offs.first->kromosom, orderData);
-        offs.second->routeSet = decodeKromosom(config, offs.second->kromosom, orderData);
-        calculateFitness(offs.first);
-        calculateFitness(offs.second);
-        #pragma omp critical
-        {
-          population.push_back(offs.first);
-          population.push_back(offs.second);
+          r=rand()/RAND_MAX;
+          if (r<config->pm){
+            rsMutation(config, offs.second);
+          }
+          offs.first->routeSet = decodeKromosom(config, offs.first->kromosom, orderData);
+          offs.second->routeSet = decodeKromosom(config, offs.second->kromosom, orderData);
+          calculateFitness(offs.first);
+          calculateFitness(offs.second);
+          private_pop.push_back(offs.first);
+          private_pop.push_back(offs.second);
         }
       }
+      #pragma omp critical
+      population.insert(population.end(), private_pop.begin(), private_pop.end());
     }
+
 
     /*
       selection NSGA2
@@ -133,7 +137,7 @@ int main(int argc, char **argv){
       bestFitness = currentBestFitness;
       bestIndividu = *population[0];
     }
-    cout<<iter+1<<" "<<bestFitness<<" "<<bestIndividu.routeCount<<" "<<bestIndividu.totalDist<<"\n";
+    // cout<<iter+1<<" "<<bestFitness<<" "<<bestIndividu.routeCount<<" "<<bestIndividu.totalDist<<"\n";
   }
   end = omp_get_wtime();
   double totalTime = end-start;
@@ -145,5 +149,5 @@ int main(int argc, char **argv){
   cout<<fixed<<setprecision(8)<<"Initial Population Generation Time: "<<initTime<<"\n";
   cout<<fixed<<setprecision(8)<<"Total Time: "<<totalTime<<"\n";
 
-  
+
 }

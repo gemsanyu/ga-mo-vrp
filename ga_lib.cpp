@@ -82,6 +82,21 @@ RouteSet *decodeKromosom(Config *config, int *kromosom, OrderData *orderData){
   return routeSet;
 }
 
+int* encodeRouteSet(Config *config, RouteSet *routeSet){
+  int* kromosom = create1DArrayInt(config->nCust);
+  int custCount=0;
+  int routeCount = routeSet->routes.size();
+  for(int rIdx=0;rIdx<routeCount;rIdx++){
+    vector<int> route = routeSet->routes[rIdx];
+    int routeLength=route.size();
+    for(int cIdx=0;cIdx<routeLength;cIdx++){
+      kromosom[custCount]=route[cIdx];
+      custCount++;
+    }
+  }
+  return kromosom;
+}
+
 Individu* initIndividuRandom(int nCust){
   Individu* individu = new Individu;
   individu->kromosom = create1DArrayInt(nCust);

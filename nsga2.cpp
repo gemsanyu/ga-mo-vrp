@@ -30,7 +30,7 @@ vector<vector<Individu*>> getParetoFronts(vector<Individu*>* population){
       }
     }
   }
-  
+
   /*
     start from the pareto optimal front
     which consists of solutions with dominatedCount = 0

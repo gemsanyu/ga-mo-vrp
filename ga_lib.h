@@ -41,6 +41,7 @@ bool cmpIndividuRouteCount(Individu* a, Individu* b);
 Individu* create1DArrayIndividu(int size);
 Customer* create1DArrayCustomer(int size);
 RouteSet* decodeKromosom(Config *config, int *kromosom, OrderData *orderData);
+int* encodeRouteSet(Config *config, RouteSet *routeSet);
 Individu* initIndividuRandom(int nCust);
 Individu* initIndividuGreedy(Config* config, OrderData* orderData);
 bool isDominate(Individu* idvA, Individu* idvB);
