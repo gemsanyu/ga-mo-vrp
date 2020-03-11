@@ -20,7 +20,13 @@ int main(int argc, char **argv){
   */
   vector<Individu*> population;
   for(int i=0;i<config->N;i++){
-    population.push_back(initIndividuRandom(config->nCust));
+    Individu* newIdv;
+    if (i%2==0){
+      newIdv = initIndividuRandom(config->nCust);
+    } else {
+      newIdv = initIndividuGreedy(config, orderData);
+    }
+    population.push_back(newIdv);
     population[i]->routeSet = decodeKromosom(config, population[i]->kromosom, orderData);
     calculateFitness(population[i]);
   }

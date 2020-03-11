@@ -92,20 +92,88 @@ Individu* initIndividuRandom(int nCust){
   return individu;
 }
 
+/*
+  find nearest feasible customer
+  feasible if cap still can contain ordersize
+  and if the distance to the customer and back to depot + current dist <= config.maxdist
+*/
+int findNearestCustIdx(Config* config, OrderData* orderData, vector<int>* custsIdx, Coordinate* currentCoord, int currentCap, double currentDist){
+  double maxDist = config->maxDist - currentDist;
+  int maxCap = config->maxCap - currentCap;
+  Coordinate depotCoord = orderData->depot;
+
+  double closestDist = numeric_limits<double>::max();
+  int closestIdx = -1;
+  for(int i=0;i<custsIdx->size();i++){
+    int custIdx = custsIdx->at(i);
+
+    /*
+      checking capacity constraint
+    */
+    int odSize = orderData->customerData[custIdx].orderSize;
+    if(odSize>maxCap){
+      continue;
+    }
+
+    /*
+      checking distance and dist to depot constraint
+    */
+    Coordinate custCoord = orderData->customerData[custIdx].coordinate;
+    double dist = euclideanDistance(*currentCoord, custCoord);
+    double distToDepot = euclideanDistance(custCoord, depotCoord);
+    if (dist+distToDepot>maxDist){
+      continue;
+    }
+
+    if (dist<closestDist){
+      closestIdx = i;
+      closestDist = dist;
+    }
+  }
+
+  return closestIdx;
+}
+
 Individu* initIndividuGreedy(Config* config, OrderData* orderData){
   int* kromosom = create1DArrayInt(config->nCust);
-  vector<int> custIdx;
+  vector<int> custsIdx;
   for(int i=0;i<config->nCust;i++){
-    custIdx.push_back(i);
+    custsIdx.push_back(i);
   }
 
   int servedCustCount = 0;
   double totalDist=0;
   int totalOrder=0;
   Coordinate lastCoord=orderData->depot;
-  while(servedCustCount<config->nCust){
+  while(!custsIdx.empty()){
+    int closestIdx = findNearestCustIdx(config, orderData, &custsIdx, &lastCoord,
+      totalOrder, totalDist);
+    /*
+      if no feasible customer left to serve
+      reset everything
+    */
+    if (closestIdx == -1){
+      totalDist = 0;
+      totalOrder = 0;
+      lastCoord=orderData->depot;
+      continue;
+    }
 
+    int closestCustIdx=custsIdx[closestIdx];
+    totalOrder+= orderData->customerData[closestCustIdx].orderSize;
+    Coordinate custCoord = orderData->customerData[closestCustIdx].coordinate;
+    double dist = euclideanDistance(lastCoord, custCoord);
+    totalDist += dist;
+
+    lastCoord = custCoord;
+    kromosom[servedCustCount]=closestCustIdx;
+    servedCustCount++;
+    custsIdx.erase(custsIdx.begin()+closestIdx);
   }
+
+  Individu* newIdv = new Individu;
+  newIdv->kromosom = kromosom;
+  return newIdv;
 }
 
 bool isDominate(Individu* idvA, Individu* idvB){
