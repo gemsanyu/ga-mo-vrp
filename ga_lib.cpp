@@ -14,9 +14,9 @@
 
 void calculateFitness(Individu *individu){
   double totalDist = 0;
-  int routeCount=individu->routeSet->routes.size();
+  int routeCount=individu->routeSet.routes.size();
   for (int r=0;r<routeCount;r++){
-    totalDist += individu->routeSet->distances[r];
+    totalDist += individu->routeSet.distances[r];
   }
   double fitnessValue = 1.0/(600.0*totalDist + 10000.0*(double)routeCount);
   individu->totalDist = totalDist;
@@ -50,8 +50,8 @@ Customer* create1DArrayCustomer(int size){
   return array;
 }
 
-RouteSet *decodeKromosom(Config *config, int *kromosom, OrderData *orderData){
-  RouteSet* routeSet = new RouteSet;
+RouteSet decodeKromosom(Config *config, vector<int> kromosom, OrderData *orderData){
+  RouteSet routeSet;
   std::vector<int> route;
   double totalDist=0;
   int totalOrder=0;
@@ -62,9 +62,9 @@ RouteSet *decodeKromosom(Config *config, int *kromosom, OrderData *orderData){
     double distToDepot = euclideanDistance(orderData->customerData[custID].coordinate, orderData->depot);
     int odSize = orderData->customerData[custID].orderSize;
     if ((totalOrder+odSize>config->maxCap) || (totalDist+dist+distToDepot>config->maxDist)){
-      routeSet->routes.push_back(route);
+      routeSet.routes.push_back(route);
       totalDist += euclideanDistance(lastCoord, orderData->depot);
-      routeSet->distances.push_back(totalDist);
+      routeSet.distances.push_back(totalDist);
       route.clear();
       totalDist=0;
       totalOrder=0;
@@ -76,9 +76,9 @@ RouteSet *decodeKromosom(Config *config, int *kromosom, OrderData *orderData){
     totalOrder += orderData->customerData[custID].orderSize;
     lastCoord = orderData->customerData[custID].coordinate;
   }
-  routeSet->routes.push_back(route);
+  routeSet.routes.push_back(route);
   totalDist += euclideanDistance(lastCoord, orderData->depot);
-  routeSet->distances.push_back(totalDist);
+  routeSet.distances.push_back(totalDist);
   return routeSet;
 }
 
@@ -97,13 +97,12 @@ int* encodeRouteSet(Config *config, RouteSet *routeSet){
   return kromosom;
 }
 
-Individu* initIndividuRandom(int nCust){
-  Individu* individu = new Individu;
-  individu->kromosom = create1DArrayInt(nCust);
+Individu initIndividuRandom(int nCust){
+  Individu individu;
   for(int i=0;i<nCust;i++){
-    individu->kromosom[i]=i;
+    individu.kromosom.push_back(i);
   }
-  random_shuffle(individu->kromosom, individu->kromosom+nCust);
+  random_shuffle(individu.kromosom.begin(), individu.kromosom.end());
   return individu;
 }
 
@@ -149,8 +148,8 @@ int findNearestCustIdx(Config* config, OrderData* orderData, vector<int>* custsI
   return closestIdx;
 }
 
-Individu* initIndividuGreedy(Config* config, OrderData* orderData){
-  int* kromosom = create1DArrayInt(config->nCust);
+Individu initIndividuGreedy(Config* config, OrderData* orderData){
+  vector<int> kromosom;
   vector<int> custsIdx;
   for(int i=0;i<config->nCust;i++){
     custsIdx.push_back(i);
@@ -188,13 +187,13 @@ Individu* initIndividuGreedy(Config* config, OrderData* orderData){
     totalDist += dist;
 
     lastCoord = custCoord;
-    kromosom[servedCustCount]=closestCustIdx;
+    kromosom.push_back(closestCustIdx);
     servedCustCount++;
     custsIdx.erase(custsIdx.begin()+closestIdx);
   }
 
-  Individu* newIdv = new Individu;
-  newIdv->kromosom = kromosom;
+  Individu newIdv;
+  newIdv.kromosom = kromosom;
   return newIdv;
 }
 
@@ -215,13 +214,15 @@ Individu* orderCrossover_(Config *config, Individu *parentA, Individu *parentB){
     a=b;
     b=c;
   }
-
   /*
     copy parentA segment (a,b) to offspring segment(a,b)
   */
   bool *genExistFlag = create1DArrayBool(config->nCust);
   Individu* offspring = new Individu;
-  offspring->kromosom = create1DArrayInt(config->nCust);
+  for(int i=0;i<config->nCust;i++){
+    offspring->kromosom.push_back(0);
+  }
+
   for (int c=a;c<=b;c++){
     int custID = parentA->kromosom[c];
     offspring->kromosom[c] = custID;
@@ -278,15 +279,16 @@ void rsMutation(Config *config, Individu *individu){
   }
 }
 
-OrderData* readOrderData(Config *config){
+OrderData readOrderData(Config *config){
   ifstream dataFile(config->fileName);
-  OrderData* odData = new OrderData;
-  odData->customerData = create1DArrayCustomer(config->nCust);
-  dataFile >> odData->depot.x >> odData->depot.y;
+  OrderData odData;
+  dataFile >> odData.depot.x >> odData.depot.y;
   for (int c=0;c<config->nCust;c++){
-    dataFile >> odData->customerData[c].coordinate.x;
-    dataFile >> odData->customerData[c].coordinate.y;
-    dataFile >> odData->customerData[c].orderSize;
+    Customer cust;
+    dataFile >> cust.coordinate.x;
+    dataFile >> cust.coordinate.y;
+    dataFile >> cust.orderSize;
+    odData.customerData.push_back(cust);
   }
   dataFile.close();
   return odData;
@@ -294,10 +296,8 @@ OrderData* readOrderData(Config *config){
 
 // Roulette Wheel
 int spinRouletteWheel_(vector<double> probs){
-	double 	select; 	// Variable Random Number
-
 	//Random Number
-	select = (double) rand()/RAND_MAX;
+	double select = (double) rand()/RAND_MAX;
 	int c = 0;
 	//code selected colom
 	while(c<probs.size()){
@@ -327,5 +327,6 @@ vector<int> spinRouletteWheel(vector<Individu*>* population, int spinCount){
     int res=spinRouletteWheel_(probs);
     result.push_back(res);
   }
+  vector<double>().swap(probs);
   return result;
 }

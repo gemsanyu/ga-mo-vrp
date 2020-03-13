@@ -1,6 +1,7 @@
 #include<algorithm>
 #include<iomanip>
 #include<iostream>
+#include<memory.h>
 #include<omp.h>
 #include<time.h>
 
@@ -11,11 +12,11 @@ using namespace std;
 int main(int argc, char **argv){
 
   ios_base::sync_with_stdio(false);
-
+  srand(time(NULL));
   char *configFileName = argv[1];
-  Config *config = readConfig(configFileName);
-  config->numThreads = atoi(argv[2]);
-  OrderData *orderData = readOrderData(config);
+  Config config = *readConfig(configFileName);
+  config.numThreads = atoi(argv[2]);
+  OrderData orderData = readOrderData(&config);
 
   double start,end;
   start = omp_get_wtime();
@@ -26,18 +27,22 @@ int main(int argc, char **argv){
     after initialization, evaluate and then sort by fitnes value
   */
   vector<Individu*> population;
-  #pragma omp parallel for num_threads (config->numThreads)
-  for(int i=0;i<config->N;i++){
-    Individu* newIdv;
+  #pragma omp parallel for num_threads (config.numThreads)
+  for(int i=0;i<config.N;i++){
+    Individu* newIdv = new Individu;
     if (i%2==0){
-      newIdv = initIndividuRandom(config->nCust);
+      Individu idv = initIndividuRandom(config.nCust);
+      newIdv->kromosom = idv.kromosom;
     } else {
-      newIdv = initIndividuGreedy(config, orderData);
+      Individu idv = initIndividuGreedy(&config, &orderData);
+      newIdv->kromosom = idv.kromosom;
     }
-    newIdv->routeSet = decodeKromosom(config, newIdv->kromosom, orderData);
+    newIdv->routeSet = decodeKromosom(&config, newIdv->kromosom, &orderData);
     calculateFitness(newIdv);
     #pragma omp critical
-    population.push_back(newIdv);
+    {
+      population.push_back(newIdv);
+    }
   }
   sort(population.begin(), population.end(), cmpIndividuFitness);
   end = omp_get_wtime();
@@ -52,20 +57,20 @@ int main(int argc, char **argv){
     for 100 consecutive iterations
   */
   int sameFitnessCount = 0;
-  Individu bestIndividu = *population[0];
-  double bestFitness = bestIndividu.fitnessValue;
+  Individu* bestIndividu = population[0];
+  double bestFitness = bestIndividu->fitnessValue;
   // cout<<0<<" "<<bestFitness<<" "<<bestIndividu.routeCount<<" "<<bestIndividu.totalDist<<"\n";
-  for (int iter=0;iter<config->maxIter && sameFitnessCount<100;iter++){
+  for (int iter=0;iter<config.maxIter && sameFitnessCount<100;iter++){
 
     /*
       spinning roulette wheel
       then delete the infertile parent based on PC
     */
-    vector<int> rwResult = spinRouletteWheel(&population, config->NP);
+    vector<int> rwResult = spinRouletteWheel(&population, config.NP);
     vector<int> parentsIdx;
     for(int p=0;p<rwResult.size();p++){
       double r = (double) rand()/RAND_MAX;
-      if (r>config->pc){
+      if (r>config.pc){
         continue;
       }
       parentsIdx.push_back(rwResult[p]);
@@ -76,49 +81,48 @@ int main(int argc, char **argv){
       with complete pairs of the chosen parents doing odx crossover
     */
     int chosenParentSize=parentsIdx.size();
-    #pragma omp parallel num_threads(config->numThreads)
-    {
-      vector<Individu*> private_pop;
-      #pragma omp for nowait
-      for(int p1=0;p1<chosenParentSize;p1++){
-        int pIdx1 = parentsIdx[p1];
-        Individu* parent1 = population[pIdx1];
-        for(int p2=p1+1;p2<chosenParentSize;p2++){
-          int pIdx2 = parentsIdx[p2];
-          Individu* parent2 = population[pIdx2];
-          pair<Individu*,Individu*> parentPair = make_pair(parent1,parent2);
+    #pragma omp parallel for num_threads(config.numThreads)
+    for(int p1=0;p1<chosenParentSize;p1++){
+      int pIdx1 = parentsIdx[p1];
+      Individu* parent1 = population[pIdx1];
+      for(int p2=p1+1;p2<chosenParentSize;p2++){
+        int pIdx2 = parentsIdx[p2];
+        Individu* parent2 = population[pIdx2];
+        pair<Individu*,Individu*> parentPair = make_pair(parent1,parent2);
 
-          pair<Individu*,Individu*> offs = orderCrossover(config, parentPair);
-          /*
-            mutating offspring
-          */
-          double r=rand()/RAND_MAX;
-          if (r<config->pm){
-            rsMutation(config, offs.first);
-          }
+        pair<Individu*,Individu*> offs = orderCrossover(&config, parentPair);
+        /*
+          mutating offspring
+        */
+        double r=rand()/RAND_MAX;
+        if (r<config.pm){
+          rsMutation(&config, offs.first);
+        }
 
-          r=rand()/RAND_MAX;
-          if (r<config->pm){
-            rsMutation(config, offs.second);
-          }
-          offs.first->routeSet = decodeKromosom(config, offs.first->kromosom, orderData);
-          offs.second->routeSet = decodeKromosom(config, offs.second->kromosom, orderData);
-          calculateFitness(offs.first);
-          calculateFitness(offs.second);
-          private_pop.push_back(offs.first);
-          private_pop.push_back(offs.second);
+        r=rand()/RAND_MAX;
+        if (r<config.pm){
+          rsMutation(&config, offs.second);
+        }
+        offs.first->routeSet = decodeKromosom(&config, offs.first->kromosom, &orderData);
+        offs.second->routeSet = decodeKromosom(&config, offs.second->kromosom, &orderData);
+        calculateFitness(offs.first);
+        calculateFitness(offs.second);
+        #pragma omp critical
+        {
+          population.push_back(offs.first);
+          population.push_back(offs.second);
         }
       }
-      #pragma omp critical
-      population.insert(population.end(), private_pop.begin(), private_pop.end());
     }
+
 
 
     /*
       selection NSGA2
     */
-    vector<Individu*> newPopulation = selectionNSGA2(config,&population);
-    population = newPopulation;
+    vector<Individu*> newPopulation = selectionNSGA2(&config, population);
+    population.swap(newPopulation);
+    vector<Individu*>().swap(newPopulation);
 
 
     /*
@@ -127,7 +131,7 @@ int main(int argc, char **argv){
     */
     sort(population.begin(), population.end(), cmpIndividuFitness);
     double currentBestFitness = population[0]->fitnessValue;
-    if (abs(bestFitness-currentBestFitness)<config->threshold){
+    if (abs(bestFitness-currentBestFitness)<config.threshold){
       sameFitnessCount++;
     } else {
       sameFitnessCount=0;
@@ -135,7 +139,7 @@ int main(int argc, char **argv){
 
     if (currentBestFitness>bestFitness){
       bestFitness = currentBestFitness;
-      bestIndividu = *population[0];
+      bestIndividu = population[0];
     }
     // cout<<iter+1<<" "<<bestFitness<<" "<<bestIndividu.routeCount<<" "<<bestIndividu.totalDist<<"\n";
   }
