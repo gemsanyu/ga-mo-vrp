@@ -14,9 +14,9 @@
 
 void calculateFitness(Individu *individu){
   double totalDist = 0;
-  int routeCount=individu->routeSet->routes.size();
+  int routeCount=individu->routeSet.routes.size();
   for (int r=0;r<routeCount;r++){
-    totalDist += individu->routeSet->distances[r];
+    totalDist += individu->routeSet.distances[r];
   }
   double fitnessValue = 1.0/(600.0*totalDist + 10000.0*(double)routeCount);
   individu->totalDist = totalDist;
@@ -50,8 +50,8 @@ Customer* create1DArrayCustomer(int size){
   return array;
 }
 
-RouteSet *decodeKromosom(Config *config, int *kromosom, OrderData *orderData){
-  RouteSet* routeSet = new RouteSet;
+RouteSet decodeKromosom(Config *config, int *kromosom, OrderData *orderData){
+  RouteSet routeSet;
   std::vector<int> route;
   double totalDist=0;
   int totalOrder=0;
@@ -62,9 +62,9 @@ RouteSet *decodeKromosom(Config *config, int *kromosom, OrderData *orderData){
     double distToDepot = euclideanDistance(orderData->customerData[custID].coordinate, orderData->depot);
     int odSize = orderData->customerData[custID].orderSize;
     if ((totalOrder+odSize>config->maxCap) || (totalDist+dist+distToDepot>config->maxDist)){
-      routeSet->routes.push_back(route);
+      routeSet.routes.push_back(route);
       totalDist += euclideanDistance(lastCoord, orderData->depot);
-      routeSet->distances.push_back(totalDist);
+      routeSet.distances.push_back(totalDist);
       route.clear();
       totalDist=0;
       totalOrder=0;
@@ -76,9 +76,9 @@ RouteSet *decodeKromosom(Config *config, int *kromosom, OrderData *orderData){
     totalOrder += orderData->customerData[custID].orderSize;
     lastCoord = orderData->customerData[custID].coordinate;
   }
-  routeSet->routes.push_back(route);
+  routeSet.routes.push_back(route);
   totalDist += euclideanDistance(lastCoord, orderData->depot);
-  routeSet->distances.push_back(totalDist);
+  routeSet.distances.push_back(totalDist);
   return routeSet;
 }
 
@@ -204,7 +204,7 @@ bool isDominate(Individu* idvA, Individu* idvB){
   ((idvA->totalDist<idvB->totalDist) || (idvA->routeCount<idvB->routeCount));
 }
 
-Individu* orderCrossover_(Config *config, Individu *parentA, Individu *parentB){
+void orderCrossover(Config *config, int* kromosomA, int* kromosomB, int* kromosomOff){
   /*
     First randomize segment points a and b
   */
@@ -220,11 +220,9 @@ Individu* orderCrossover_(Config *config, Individu *parentA, Individu *parentB){
     copy parentA segment (a,b) to offspring segment(a,b)
   */
   bool *genExistFlag = create1DArrayBool(config->nCust);
-  Individu* offspring = new Individu;
-  offspring->kromosom = create1DArrayInt(config->nCust);
   for (int c=a;c<=b;c++){
-    int custID = parentA->kromosom[c];
-    offspring->kromosom[c] = custID;
+    int custID = kromosomA[c];
+    kromosomOff[c] = custID;
     genExistFlag[custID] = true;
   }
 
@@ -234,27 +232,20 @@ Individu* orderCrossover_(Config *config, Individu *parentA, Individu *parentB){
   */
   int ofIdx=(b+1)%config->nCust;
   for (int genBIdx=(b+1)%config->nCust;ofIdx<a || ofIdx>b;genBIdx = (genBIdx+1)%config->nCust){
-    int gen = parentB->kromosom[genBIdx];
+    int gen = kromosomB[genBIdx];
     if (genExistFlag[gen]){
       continue;
     }
-    offspring->kromosom[ofIdx]=gen;
+    kromosomOff[ofIdx]=gen;
 
     genExistFlag[gen]=true;
     ofIdx = (ofIdx+1)%config->nCust;
   }
+
   delete[] genExistFlag;
-  return offspring;
 }
 
-pair<Individu*,Individu*> orderCrossover(Config *config, pair<Individu*,Individu*> parents){
-  pair<Individu*,Individu*> offs;
-  offs.first = orderCrossover_(config, parents.first, parents.second);
-  offs.second = orderCrossover_(config, parents.second, parents.first);
-  return offs;
-}
-
-void rsMutation(Config *config, Individu *individu){
+void rsMutation(Config *config, int* kromosom){
   /*
     First randomize Mutation-segment points a and b
   */
@@ -271,9 +262,9 @@ void rsMutation(Config *config, Individu *individu){
 
   //Swapping Algorithm
   while(indxMutA<indxMutB){
-    int custID = individu->kromosom[indxMutA];
-    individu->kromosom[indxMutA] = individu->kromosom[indxMutB];
-    individu->kromosom[indxMutB] = custID;
+    int custID = kromosom[indxMutA];
+    kromosom[indxMutA] = kromosom[indxMutB];
+    kromosom[indxMutB] = custID;
     indxMutA++;indxMutB--;
   }
 }

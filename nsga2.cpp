@@ -35,14 +35,13 @@ vector<vector<Individu*>> getParetoFronts(vector<Individu*>* population){
     start from the pareto optimal front
     which consists of solutions with dominatedCount = 0
   */
-  vector<Individu*>* paretoFront = new vector<Individu*>;
+  vector<Individu*> paretoFront;
   for (int i=populationSize-1;i>=0;i--){
     if(population->at(i)->dominatedCount==0){
-      paretoFront->push_back(population->at(i));
+      paretoFront.push_back(population->at(i));
       population->erase(population->begin()+i);
     }
   }
-
   vector<vector<Individu*>> paretoFronts;
 
   /*
@@ -50,20 +49,22 @@ vector<vector<Individu*>> getParetoFronts(vector<Individu*>* population){
     and get the next pareto optimal front from the population
     repeat
   */
+  int iter=0;
   while(!population->empty()){
-    paretoFronts.push_back(*paretoFront);
-    vector<Individu*>* lastParetoFront = paretoFront;
-    paretoFront = new vector<Individu*>;
-    for(int i=0;i<lastParetoFront->size();i++){
-      for(int j=0;j<lastParetoFront->at(i)->dominatedIndividuVec.size();j++){
-        lastParetoFront->at(i)->dominatedIndividuVec[j]->dominatedCount--;
+    paretoFronts.push_back(paretoFront);
+    vector<Individu*> lastParetoFront = paretoFront;
+    vector<Individu*>().swap(paretoFront);
+    // cout<<paretoFront.size()<<"\n";
+    for(int i=0;i<lastParetoFront.size();i++){
+      for(int j=0;j<lastParetoFront[i]->dominatedIndividuVec.size();j++){
+        lastParetoFront[i]->dominatedIndividuVec[j]->dominatedCount--;
       }
     }
 
     populationSize=population->size();
     for (int i=populationSize-1;i>=0;i--){
       if(population->at(i)->dominatedCount==0){
-        paretoFront->push_back(population->at(i));
+        paretoFront.push_back(population->at(i));
         population->erase(population->begin()+i);
       }
     }
@@ -85,12 +86,17 @@ vector<Individu*> selectionNSGA2(Config *config, vector<Individu*>* population){
     sortCrowdingDistance(paretoFronts[i]);
     for(int j=0;j<paretoFronts[i].size();j++){
       if(newPopulation.size()==config->N){
-        newPopulationFull;
+        newPopulationFull=true;
         break;
       }
       newPopulation.push_back(paretoFronts[i][j]);
     }
   }
+
+  for(int i=0;i<paretoFronts.size();i++){
+    vector<Individu*>().swap(paretoFronts[i]);
+  }
+  vector<vector<Individu*>>().swap(paretoFronts);
 
   return newPopulation;
 }
