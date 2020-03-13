@@ -50,8 +50,7 @@ Customer* create1DArrayCustomer(int size){
   return array;
 }
 
-RouteSet decodeKromosom(Config *config, int *kromosom, OrderData *orderData){
-  RouteSet routeSet;
+void decodeKromosom(Config *config, int *kromosom, OrderData *orderData, RouteSet* routeSet){
   std::vector<int> route;
   double totalDist=0;
   int totalOrder=0;
@@ -62,9 +61,9 @@ RouteSet decodeKromosom(Config *config, int *kromosom, OrderData *orderData){
     double distToDepot = euclideanDistance(orderData->customerData[custID].coordinate, orderData->depot);
     int odSize = orderData->customerData[custID].orderSize;
     if ((totalOrder+odSize>config->maxCap) || (totalDist+dist+distToDepot>config->maxDist)){
-      routeSet.routes.push_back(route);
+      routeSet->routes.push_back(route);
       totalDist += euclideanDistance(lastCoord, orderData->depot);
-      routeSet.distances.push_back(totalDist);
+      routeSet->distances.push_back(totalDist);
       route.clear();
       totalDist=0;
       totalOrder=0;
@@ -76,10 +75,9 @@ RouteSet decodeKromosom(Config *config, int *kromosom, OrderData *orderData){
     totalOrder += orderData->customerData[custID].orderSize;
     lastCoord = orderData->customerData[custID].coordinate;
   }
-  routeSet.routes.push_back(route);
+  routeSet->routes.push_back(route);
   totalDist += euclideanDistance(lastCoord, orderData->depot);
-  routeSet.distances.push_back(totalDist);
-  return routeSet;
+  routeSet->distances.push_back(totalDist);
 }
 
 int* encodeRouteSet(Config *config, RouteSet *routeSet){
@@ -97,14 +95,11 @@ int* encodeRouteSet(Config *config, RouteSet *routeSet){
   return kromosom;
 }
 
-Individu* initIndividuRandom(int nCust){
-  Individu* individu = new Individu;
-  individu->kromosom = create1DArrayInt(nCust);
+void initIndividuRandom(int nCust, int* kromosom){
   for(int i=0;i<nCust;i++){
-    individu->kromosom[i]=i;
+    kromosom[i]=i;
   }
-  random_shuffle(individu->kromosom, individu->kromosom+nCust);
-  return individu;
+  random_shuffle(kromosom, kromosom+nCust);
 }
 
 /*
@@ -149,8 +144,7 @@ int findNearestCustIdx(Config* config, OrderData* orderData, vector<int>* custsI
   return closestIdx;
 }
 
-Individu* initIndividuGreedy(Config* config, OrderData* orderData){
-  int* kromosom = create1DArrayInt(config->nCust);
+void initIndividuGreedy(Config* config, OrderData* orderData, int* kromosom){
   vector<int> custsIdx;
   for(int i=0;i<config->nCust;i++){
     custsIdx.push_back(i);
@@ -192,10 +186,6 @@ Individu* initIndividuGreedy(Config* config, OrderData* orderData){
     servedCustCount++;
     custsIdx.erase(custsIdx.begin()+closestIdx);
   }
-
-  Individu* newIdv = new Individu;
-  newIdv->kromosom = kromosom;
-  return newIdv;
 }
 
 bool isDominate(Individu* idvA, Individu* idvB){

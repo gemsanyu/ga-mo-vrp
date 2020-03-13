@@ -13,7 +13,6 @@ struct RouteSet{
 };
 
 struct Individu{
-  int ID;
   int *kromosom;
   RouteSet routeSet;
   double totalDist;
@@ -41,10 +40,10 @@ bool cmpIndividuTotalDist(Individu* a, Individu* b);
 bool cmpIndividuRouteCount(Individu* a, Individu* b);
 Individu* create1DArrayIndividu(int size);
 Customer* create1DArrayCustomer(int size);
-RouteSet decodeKromosom(Config *config, int *kromosom, OrderData *orderData);
+void decodeKromosom(Config *config, int *kromosom, OrderData *orderData, RouteSet* routeSet);
 int* encodeRouteSet(Config *config, RouteSet *routeSet);
-Individu* initIndividuRandom(int nCust);
-Individu* initIndividuGreedy(Config* config, OrderData* orderData);
+void initIndividuRandom(int nCust, int* kromosom);
+void initIndividuGreedy(Config* config, OrderData* orderData, int* kromosom);
 bool isDominate(Individu* idvA, Individu* idvB);
 void orderCrossover(Config* config, int* kromosomA, int* kromosomB, int* kromosomOffs);
 void rsMutation(Config* config, int* kromosomOffs);

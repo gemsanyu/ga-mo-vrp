@@ -9,11 +9,10 @@
 using namespace std;
 
 int main(int argc, char **argv){
-  // srand(time(NULL));
+  srand(time(NULL));
   // ios_base::sync_with_stdio(false);
 
   char *configFileName = argv[1];
-  int lastID=0;
   Config *config = readConfig(configFileName);
   config->numThreads = atoi(argv[2]);
   OrderData *orderData = readOrderData(config);
@@ -29,14 +28,15 @@ int main(int argc, char **argv){
   vector<Individu*> population;
   #pragma omp parallel for num_threads (config->numThreads)
   for(int i=0;i<config->N;i++){
-    Individu* newIdv;
+    int* kromosom = create1DArrayInt(config->nCust);
     if (i%2==0){
-      newIdv = initIndividuRandom(config->nCust);
+      initIndividuRandom(config->nCust, kromosom);
     } else {
-      newIdv = initIndividuGreedy(config, orderData);
+      initIndividuGreedy(config, orderData, kromosom);
     }
-    newIdv->ID=lastID++;
-    newIdv->routeSet = decodeKromosom(config, newIdv->kromosom, orderData);
+    Individu* newIdv = new Individu;
+    newIdv->kromosom = kromosom;
+    decodeKromosom(config, newIdv->kromosom, orderData, &newIdv->routeSet);
     calculateFitness(newIdv);
     #pragma omp critical
     population.push_back(newIdv);
@@ -48,7 +48,7 @@ int main(int argc, char **argv){
   /*
     Start the GA
     for MaxIter
-    or until the difference between
+    or until
     the difference between current bestFitness and last bestFitness
     is less than the threshold
     for 100 consecutive iterations
@@ -57,7 +57,8 @@ int main(int argc, char **argv){
   Individu bestIndividu = *population[0];
   double bestFitness = bestIndividu.fitnessValue;
   // cout<<0<<" "<<bestFitness<<" "<<bestIndividu.routeCount<<" "<<bestIndividu.totalDist<<"\n";
-  for (int iter=0;iter<config->maxIter && sameFitnessCount<100;iter++){
+  int iter;
+  for (iter=0;iter<config->maxIter && sameFitnessCount<500;iter++){
     /*
       spinning roulette wheel
       then delete the infertile parent based on PC
@@ -105,14 +106,12 @@ int main(int argc, char **argv){
 
         Individu* off1 = new Individu();
         off1->kromosom = kromosomOff1;
-        off1->ID =lastID++;
-        off1->routeSet = decodeKromosom(config, off1->kromosom, orderData);
+        decodeKromosom(config, off1->kromosom, orderData, &off1->routeSet);
         calculateFitness(off1);
 
         Individu* off2 = new Individu;
         off2->kromosom = kromosomOff2;
-        off2->ID =lastID++;
-        off2->routeSet = decodeKromosom(config, off2->kromosom, orderData);
+        decodeKromosom(config, off2->kromosom, orderData, &off2->routeSet);
         calculateFitness(off2);
         #pragma omp critical
         {
@@ -157,7 +156,9 @@ int main(int argc, char **argv){
     cout<<fixed<<setprecision(8)<<"solution-"<<i<<": "<<population[i]->routeCount<<" "<<population[i]->totalDist<<"\n";
   }
   cout<<fixed<<setprecision(8)<<"Initial Population Generation Time: "<<initTime<<"\n";
+  cout<<"GA stopped at iteration-"<<iter<<"\n";
   cout<<fixed<<setprecision(8)<<"Total Time: "<<totalTime<<"\n";
+  cout<<fixed<<setprecision(8)<<"Mean Time per iteration: "<<totalTime/(double)iter<<"\n";
 
   /*
     freeing memory
