@@ -14,8 +14,21 @@ int main(int argc, char **argv){
 
   char *configFileName = argv[1];
   Config *config = readConfig(configFileName);
-  config->numThreads = atoi(argv[2]);
-  OrderData *orderData = readOrderData(config);
+  config->fileName = argv[2];
+  OrderData *orderData = new OrderData;
+  readOrderData(config, orderData);
+
+  cout << "Using Data : " << config->fileName  <<"\n";
+  cout << "N Customer : " << config->nCust  <<"\n";
+  cout << "Max Distance : " << config->maxDist  <<"\n";
+  cout << "Max Cap : " << config->maxCap  <<"\n";
+  cout << fixed << setprecision(5)<< orderData->depot.x<<" "<<orderData->depot.y<<"\n";
+  cout << "Max Iteration : " << config->maxIter  <<"\n";
+  cout << "convergence threshold : " << config->threshold  <<"\n";
+  cout << "N : " << config->N  <<"\n";
+  cout << "NP : " << config->NP<<"\n";
+  cout << "pc : " << config->pc<<"\n";
+  cout << "pm : " << config->pm<<"\n";
 
   double start,end;
   start = omp_get_wtime();
@@ -26,7 +39,6 @@ int main(int argc, char **argv){
     after initialization, evaluate and then sort by fitnes value
   */
   vector<Individu*> population;
-  #pragma omp parallel for num_threads (config->numThreads)
   for(int i=0;i<config->N;i++){
     int* kromosom = create1DArrayInt(config->nCust);
     if (i%2==0){
@@ -38,7 +50,6 @@ int main(int argc, char **argv){
     newIdv->kromosom = kromosom;
     decodeKromosom(config, newIdv->kromosom, orderData, &newIdv->routeSet);
     calculateFitness(newIdv);
-    #pragma omp critical
     population.push_back(newIdv);
   }
   sort(population.begin(), population.end(), cmpIndividuFitness);
@@ -78,7 +89,6 @@ int main(int argc, char **argv){
       with complete pairs of the chosen parents doing odx crossover
     */
     int chosenParentSize=parentsIdx.size();
-    #pragma omp parallel for num_threads(config->numThreads)
     for(int p1=0;p1<chosenParentSize;p1++){
       int pIdx1 = parentsIdx[p1];
       int* kromosomP1 = population[pIdx1]->kromosom;
@@ -113,11 +123,8 @@ int main(int argc, char **argv){
         off2->kromosom = kromosomOff2;
         decodeKromosom(config, off2->kromosom, orderData, &off2->routeSet);
         calculateFitness(off2);
-        #pragma omp critical
-        {
-          population.push_back(off1);
-          population.push_back(off2);
-        }
+        population.push_back(off1);
+        population.push_back(off2);
       }
     }
 

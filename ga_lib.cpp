@@ -259,18 +259,17 @@ void rsMutation(Config *config, int* kromosom){
   }
 }
 
-OrderData* readOrderData(Config *config){
+void readOrderData(Config *config, OrderData *odData){
   ifstream dataFile(config->fileName);
-  OrderData* odData = new OrderData;
-  odData->customerData = create1DArrayCustomer(config->nCust);
+  dataFile >> config->nCust >> config->maxDist >> config->maxCap;
   dataFile >> odData->depot.x >> odData->depot.y;
+  odData->customerData = create1DArrayCustomer(config->nCust);
   for (int c=0;c<config->nCust;c++){
     dataFile >> odData->customerData[c].coordinate.x;
     dataFile >> odData->customerData[c].coordinate.y;
     dataFile >> odData->customerData[c].orderSize;
   }
   dataFile.close();
-  return odData;
 }
 
 // Roulette Wheel

@@ -33,20 +33,8 @@ Config* readConfig(string configFileName){
 
   Config* config = new Config;
   string dataName;
-  configFile >> dataName;
-  config->fileName = "data/"+dataName;
-  configFile >> config->nCust >> config->maxDist >> config->maxCap >> config->maxIter;
-  configFile >> config->threshold >>  config->N >> config->NP >> config->pc >> config->pm;
-  cout << "Using " << dataName <<"\n";
-  cout << "Num of Cust : " << config->nCust <<"\n";
-  cout << "Max Dist : " << config->maxDist <<"\n";
-  cout << "Max Cap : " << config->maxCap <<"\n";
-  cout << "Max Iteration : " << config->maxIter  <<"\n";
-  cout << "convergence threshold : " << config->threshold  <<"\n";
-  cout << "N : " << config->N  <<"\n";
-  cout << "NP : " << config->NP<<"\n";
-  cout << "pc : " << config->pc<<"\n";
-  cout << "pm : " << config->pm<<"\n";
+  configFile >> config->maxIter >> config->threshold >>  config->N;
+  configFile >> config->NP >> config->pc >> config->pm;
   configFile.close();
   return config;
 }
