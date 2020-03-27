@@ -10,7 +10,7 @@
 using namespace std;
 
 int main(int argc, char **argv){
-  srand(time(NULL));
+  // srand(time(NULL));
   // ios_base::sync_with_stdio(false);
 
   char *configFileName = argv[1];
@@ -128,18 +128,21 @@ int main(int argc, char **argv){
           odAs.push_back(a);
           odBs.push_back(b);
 
-          a=rand()%config->nCust;
-          b=rand()%config->nCust;
-          if (a>b){
-            int c=a;
-            a=b;
-            b=c;
+          double r=rand()/RAND_MAX;
+          if (r<config->pm){
+            isMuts.push_back(true);
+            a=rand()%config->nCust;
+            b=rand()%config->nCust;
+            if (a>b){
+              int c=a;
+              a=b;
+              b=c;
+            }
+          } else {
+            isMuts.push_back(false);
           }
           mutAs.push_back(a);
           mutBs.push_back(b);
-
-          double r=rand()/RAND_MAX;
-          isMuts.push_back(r<config->pm);
 
         }
       }
@@ -190,7 +193,9 @@ int main(int argc, char **argv){
 
     for(int i=0;i<offSize;i++){
       cudaStreamSynchronize(cudaStreams[i]);
-      orderCrossover<<< 1,1,0,cudaStreams[i] >>>(d_nCust, d_kromosomAs[i], d_kromosomBs[i], d_kromosomOffs[i],
+      int threadCount=odBs[i]-odAs[i]+1;
+      size_t sharedMemory = config->nCust*sizeof(bool);
+      orderCrossover<<< 1,threadCount,sharedMemory,cudaStreams[i] >>>(d_nCust, d_kromosomAs[i], d_kromosomBs[i], d_kromosomOffs[i],
         d_odAs[i], d_odBs[i]);
     }
 

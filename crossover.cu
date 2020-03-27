@@ -6,33 +6,33 @@ int *odA, int *odB){
   /*
     copy parentA segment (a,b) to offspring segment(a,b)
   */
-  bool *genExistFlag = (bool*) malloc((*nCust)*sizeof(bool));
-  for(int i=0;i<(*nCust);i++){
+  extern __shared__ bool genExistFlag[];
+  int idx=threadIdx.x;
+  int stride=blockDim.x;
+  for(int i=idx;i<(*nCust);i+=stride){
     genExistFlag[i]=false;
   }
 
-  for (int c=*odA;c<=*odB;c++){
-    int custID = kromosomA[c];
-    kromosomOff[c] = custID;
-    genExistFlag[custID] = true;
-  }
+  int custID = kromosomA[(*odA)+idx];
+  kromosomOff[(*odA)+idx] = custID;
+  genExistFlag[custID] = true;
+  // __syncthreads();
 
   /*
     and then add parentB's gens
     not yet contained by the offspring
   */
-  int ofIdx=((*odB)+1)%(*nCust);
-  for (int genBIdx=((*odB)+1)%(*nCust);ofIdx<(*odA) || ofIdx>(*odB);genBIdx = (genBIdx+1)%(*nCust)){
-    int gen = kromosomB[genBIdx];
-    if (genExistFlag[gen]){
-      continue;
+  if(idx==0){
+    int ofIdx=((*odB)+1)%(*nCust);
+    for (int genBIdx=((*odB)+1)%(*nCust);ofIdx<(*odA) || ofIdx>(*odB);genBIdx = (genBIdx+1)%(*nCust)){
+      int gen = kromosomB[genBIdx];
+      if (genExistFlag[gen]){
+        continue;
+      }
+      kromosomOff[ofIdx]=gen;
+      ofIdx = (ofIdx+1)%(*nCust);
     }
-    kromosomOff[ofIdx]=gen;
-
-    genExistFlag[gen]=true;
-    ofIdx = (ofIdx+1)%(*nCust);
   }
-  free(genExistFlag);
 }
 
 __global__ void rsMutationPar(int* kromosomOff, int *mutA, int *mutB){
