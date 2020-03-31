@@ -1,16 +1,18 @@
-#include <ctime>
 #include <fstream>
 #include <iostream>
 #include <sstream>
 #include <stdlib.h>
 #include <string>
 #include <thrust/device_vector.h>
+#include <thrust/device_ptr.h>
 #include <thrust/extrema.h>
+#include <thrust/gather.h>
+#include <thrust/iterator/counting_iterator.h>
+#include <thrust/sort.h>
 #include <random>
 #include <vector>
 
-
-#include"helper_lib.h"
+#include "helper_lib.h"
 
 double getEuclideanDistance(double x0, double y0, double x1, double y1){
   return sqrt((x0-x1)*(x0-x1)+(y0-y1)*(y0-y1));
@@ -38,136 +40,87 @@ void readData(Config &config, Data &data){
     data.customers.orderSize.push_back(orderSize);
   }
   dataFile.close();
-}
-
-void initPopulation(Population &population, Data &data, Config &config){
-  thrust::default_random_engine randEng;
-  thrust::uniform_real_distribution<double> uniDist(0,1);
-  randEng.discard(time(NULL));
-
-  for(int i=0;i<config.N;i++){
-    if(i%2==0){
-      initKromosomRandom(population.kromosom[i], config.nCust);
-    } else {
-      int initialIdx = uniDist(randEng)*(double)config.nCust;
-      initKromosomGreedy(population.kromosom[i], initialIdx, data, config);
-    }
-  }
-}
-
-void initKromosomGreedy(thrust::device_vector<int> &kromosom, int initialIdx,
-  Data &data, Config &config){
-
-  double depotX = data.depotX;
-  double depotY = data.depotY;
-
-  int maxCap = config.maxCap;
-  double maxDist = config.maxDist;
-  int servedCustomerCount = 0;
-
-  thrust::device_vector<double> distancesToNextCust(config.nCust);
-  thrust::device_vector<double> distancesCustToDepot(config.nCust);
-  thrust::device_vector<bool> isUsed(config.nCust, false);
 
   /*
-    get random initial customer
+    from the custs coord and depot coord
+    we can pre-compute distances among customers and cust-depot
   */
+  thrust::device_vector<double> distancesToCust(config.nCust*config.nCust);
+  thrust::device_vector<double> distancesToDepot(config.nCust);
 
-  double lastX = data.customers.x[initialIdx];
-  double lastY = data.customers.y[initialIdx];
-
-  double dist = getEuclideanDistance(depotX, depotY, lastX, lastY);
-  maxDist = maxDist - dist;
-  maxCap = maxCap - data.customers.orderSize[initialIdx];
-  kromosom[servedCustomerCount]=initialIdx;
-  servedCustomerCount++;
-  isUsed[initialIdx]=true;
-
-  /*
-    starting the greedy routing
-    first prepare the distance from every customer to depot
-  */
   thrust::transform(
     data.customers.x.begin(),
     data.customers.x.end(),
     data.customers.y.begin(),
-    distancesCustToDepot.begin(),
-    GetEuclideanDistance(depotX, depotY)
+    distancesToDepot.begin(),
+    GetEuclideanDistance(data.depotX, data.depotY)
   );
 
-  while(servedCustomerCount<config.nCust){
-    /*
-      finding the nearest customer
-      1. calculate distance from last coord to all customers
-      2. check isUsed
-      3. check MaxDist
-      4. check MaxCap
-    */
+  for(int i=0;i<config.nCust;i++){
+    double custX=data.customers.x[i];
+    double custY=data.customers.y[i];
+
     thrust::transform(
       data.customers.x.begin(),
       data.customers.x.end(),
       data.customers.y.begin(),
-      distancesToNextCust.begin(),
-      GetEuclideanDistance(lastX, lastY)
+      distancesToCust.begin()+i*config.nCust,
+      GetEuclideanDistance(custX, custY)
     );
-
-    thrust::transform(
-      isUsed.begin(),
-      isUsed.end(),
-      distancesToNextCust.begin(),
-      distancesToNextCust.begin(),
-      CheckIsUsed()
-    );
-
-    thrust::transform(
-      distancesToNextCust.begin(),
-      distancesToNextCust.end(),
-      distancesCustToDepot.begin(),
-      distancesToNextCust.begin(),
-      CheckMaxDistance(config.maxDist)
-    );
-
-    thrust::transform(
-      data.customers.orderSize.begin(),
-      data.customers.orderSize.end(),
-      distancesToNextCust.begin(),
-      distancesToNextCust.begin(),
-      CheckMaxCap(config.maxCap)
-    );
-
-    thrust::device_vector<double>::iterator iter = thrust::min_element(
-      distancesToNextCust.begin(),
-      distancesToNextCust.end()
-    );
-    int chosenCustIdx=iter-distancesToNextCust.begin();
-    double closestDistance=*iter;
-
-    /*
-      check if feasible customer to visit exists
-      else go back to depot and start again
-    */
-    if(closestDistance==INF_DISTANCE){
-      maxDist=config.maxDist;
-      maxCap=config.maxCap;
-      lastX=depotX;
-      lastY=depotY;
-      continue;
-    }
-
-    maxDist = maxDist - closestDistance;
-    maxCap = maxCap - data.customers.orderSize[chosenCustIdx];
-    lastX = data.customers.x[chosenCustIdx];
-    lastY = data.customers.y[chosenCustIdx];
-    kromosom[servedCustomerCount]=chosenCustIdx;
-    servedCustomerCount++;
-    isUsed[chosenCustIdx]=true;
   }
+
+  data.distancesToCust = distancesToCust;
+  data.distancesToDepot = distancesToDepot;
 }
 
-void initKromosomRandom(thrust::device_vector<int> &kromosom, int nCust){
-  thrust::sequence(kromosom.begin(), kromosom.end(), 0, 1);
-  thrust::host_vector<double> h_randKey(nCust);
-  thrust::generate(h_randKey.begin(), h_randKey.end(), rand);
-  thrust::device_vector<double> randKey = h_randKey;
-  thrust::sort_by_key(randKey.begin(), randKey.end(), kromosom.begin());
+void sortPopulationByFitness(Population &population, Config const &config){
+
+  /*
+    prepare space for sorted values
+  */
+  thrust::device_vector<double> sortedTotalDist(config.nCust);
+  thrust::device_vector<int> sortedRouteCount(config.nCust);
+
+  /*
+    initialize indices vector to [0,1,2,..]
+  */
+  thrust::counting_iterator<int> iter(0);
+  thrust::device_vector<int> indices(config.N);
+  thrust::copy(iter, iter + indices.size(), indices.begin());
+  
+  /*
+    first sort the keys and indices by the keys
+  */
+  thrust::sort_by_key(
+    population.fitnessValue.begin(),
+    population.fitnessValue.end(),
+    indices.begin(),
+    thrust::greater<double>()
+  );
+
+  /*
+    Now reorder totalDist, routeCount, fitnessValue and kromosom
+    using the sorted indices
+  */
+  thrust::gather(
+    indices.begin(),
+    indices.end(),
+    population.totalDist.begin(),
+    sortedTotalDist.begin()
+  );
+  population.totalDist = sortedTotalDist;
+
+  thrust::gather(
+    indices.begin(),
+    indices.end(),
+    population.routeCount.begin(),
+    sortedRouteCount.begin()
+  );
+  population.routeCount = sortedRouteCount;
+
+  std::vector<thrust::device_vector<int>> sortedKromosom(config.N);
+  for(int i=0;i<config.N;i++){
+    sortedKromosom[i]=population.kromosom[indices[i]];
+  }
+  population.kromosom = sortedKromosom;
 }

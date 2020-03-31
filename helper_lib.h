@@ -25,10 +25,15 @@ struct Customers{
 struct Data{
   double depotX, depotY;
   Customers customers;
+  thrust::device_vector<double> distancesToCust;
+  thrust::device_vector<double> distancesToDepot;
 };
 
 struct Population{
   std::vector<thrust::device_vector<int>> kromosom;
+  thrust::device_vector<int> routeCount;
+  thrust::device_vector<double> totalDist;
+  thrust::device_vector<double> fitnessValue;
 };
 
 struct GetEuclideanDistance : public thrust::binary_function<double,double,double>{
@@ -41,44 +46,13 @@ struct GetEuclideanDistance : public thrust::binary_function<double,double,doubl
   }
 };
 
-struct CheckMaxDistance : public thrust::binary_function<double,double,double>{
-  const double maxDistance;
-  CheckMaxDistance(double _maxDistance) : maxDistance(_maxDistance) {}
-
+struct CalculateFitness : public thrust::binary_function<double,int,double>{
   __device__
-  double operator () (double distance, double distanceToDepot){
-    if (distance+distanceToDepot>maxDistance){
-      return INF_DISTANCE;
-    } else {
-      return distance;
-    }
+  double operator () (double totalDist, int routeCount){
+    return 1/(600.0*totalDist + 10000.0*(double)routeCount);
   }
 };
 
-struct CheckMaxCap : public thrust::binary_function<int,double,double>{
-  const double maxCap;
-  CheckMaxCap(double _maxCap) : maxCap(_maxCap) {}
-
-  __device__
-  double operator () (int orderSize, double distance){
-    if (orderSize>maxCap){
-      return INF_DISTANCE;
-    } else {
-      return distance;
-    }
-  }
-};
-
-struct CheckIsUsed : public thrust::binary_function<bool,double,double> {
-  __device__
-  double operator () (bool isUsed, double distance){
-    if (isUsed){
-      return INF_DISTANCE;
-    } else {
-      return distance;
-    }
-  }
-};
 
 double getEuclideanDistance(double x0, double y0, double x1, double y1);
 void readConfig(std::string configFileName, Config &config);
@@ -87,5 +61,10 @@ void initPopulation(Population &population, Data &data, Config &config);
 void initKromosomRandom(thrust::device_vector<int> &kromosom, int nCust);
 void initKromosomGreedy(thrust::device_vector<int> &kromosom, int initialIdx,
   Data &data, Config &config);
+void decodeKromosom(thrust::device_vector<int> kromosom, Data data,
+  Config config, int &routeCount, double &totalDist);
+void sortPopulationByFitness(Population &population, Config const &config);
+void getParentsIdx(Population const &population, Config const &config,
+  thrust::device_vector<int> &parentsIdx, int &parentCount);
 
 #endif
