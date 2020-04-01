@@ -20,33 +20,6 @@ struct Normalize{
   }
 };
 
-struct Rand01{
-  __host__
-  double operator () (){
-    return ((double)rand() / (double)RAND_MAX);
-  }
-};
-
-struct Lesser{
-  double r;
-  Lesser(double _r) : r(_r) {}
-
-  __device__
-  bool operator () (double val){
-    return val<=r;
-  }
-};
-
-struct Greater{
-  double r;
-  Greater(double _r) : r(_r) {}
-
-  __device__
-  bool operator () (double val){
-    return val>=r;
-  }
-};
-
 
 void getParentsIdx(Population const &population, Config const &config,
   thrust::device_vector<int> &parentsIdx, int &parentCount){

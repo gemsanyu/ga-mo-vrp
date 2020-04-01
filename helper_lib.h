@@ -5,6 +5,7 @@
 #include <thrust/random.h>
 #include <cstring>
 #include <vector>
+#include <random>
 
 const double INF_DISTANCE=1000000000;
 
@@ -53,6 +54,54 @@ struct CalculateFitness : public thrust::binary_function<double,int,double>{
   }
 };
 
+struct Rand01{
+  __host__
+  double operator () (){
+    return ((double)rand() / (double)RAND_MAX);
+  }
+};
+
+struct RandInt{
+  int upper;
+
+  RandInt(int _upper): upper(_upper) {}
+  __host__
+  double operator () (){
+    int ret =  rand()%upper;
+    if (ret==0){
+      ret++;
+    }
+    return ret;
+  }
+};
+
+struct RandIntDynamicUpper{
+  __host__
+  int operator () (int upper){
+    return rand()%upper;
+  }
+};
+
+struct Lesser{
+  double r;
+  Lesser(double _r) : r(_r) {}
+
+  __device__
+  bool operator () (double val){
+    return val<=r;
+  }
+};
+
+struct Greater{
+  double r;
+  Greater(double _r) : r(_r) {}
+
+  __device__
+  bool operator () (double val){
+    return val>=r;
+  }
+};
+
 
 double getEuclideanDistance(double x0, double y0, double x1, double y1);
 void readConfig(std::string configFileName, Config &config);
@@ -66,5 +115,9 @@ void decodeKromosom(thrust::device_vector<int> kromosom, Data data,
 void sortPopulationByFitness(Population &population, Config const &config);
 void getParentsIdx(Population const &population, Config const &config,
   thrust::device_vector<int> &parentsIdx, int &parentCount);
-
+  void crossoverMutation(Population population, Population &offspring,
+    thrust::device_vector<int> parentsIdx, Config config);
+__global__ void orderCrossover(int *nCust, int **kromosomAs, int **kromosomBs,
+  int **kromosomOffs, int *odAs, int *odBs);
+__global__ void rsMutationPar(int **kromosomOffs, int *mutAs, int *mutBs);
 #endif

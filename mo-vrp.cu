@@ -4,6 +4,8 @@
 
 #include "helper_lib.h"
 
+
+
 int main(int argc, char **argv){
   char *configFileName = argv[1];
   Config config;
@@ -11,12 +13,8 @@ int main(int argc, char **argv){
   config.fileName = argv[2];
   Data data;
   readData(config, data);
-
-  // for(int i=0;i<config.nCust;i++){
-  //   std::cout<<data.customers.x[i]<<" "<<data.customers.y[i]<<"\n";
-  // }
-
   Population population;
+
   /*
     init population
   */
@@ -29,9 +27,9 @@ int main(int argc, char **argv){
   /*
     decoding and computing fitness value
   */
-  population.totalDist = thrust::device_vector<double>(config.nCust);
-  population.fitnessValue = thrust::device_vector<double>(config.nCust);
-  population.routeCount = thrust::device_vector<double>(config.nCust);
+  population.totalDist = thrust::device_vector<double>(config.N);
+  population.fitnessValue = thrust::device_vector<double>(config.N);
+  population.routeCount = thrust::device_vector<double>(config.N);
   for(int i=0;i<config.N;i++){
     int routeCount_t;
     double totalDist_t;
@@ -50,26 +48,6 @@ int main(int argc, char **argv){
   );
   sortPopulationByFitness(population, config);
 
-  // thrust::copy(
-  //   population.fitnessValue.begin(),
-  //   population.fitnessValue.end(),
-  //   std::ostream_iterator<double>(std::cout," ")
-  // );
-  // std::cout<<"\n";
-  // thrust::copy(
-  //   population.routeCount.begin(),
-  //   population.routeCount.end(),
-  //   std::ostream_iterator<int>(std::cout," ")
-  // );
-  // std::cout<<"\n";
-  // thrust::copy(
-  //   population.totalDist.begin(),
-  //   population.totalDist.end(),
-  //   std::ostream_iterator<double>(std::cout," ")
-  // );
-  // std::cout<<"\n";
-
-
   /*
     start the GA iteration wohoo !
   */
@@ -87,8 +65,18 @@ int main(int argc, char **argv){
     getParentsIdx(population, config, parentsIdx, parentCount);
 
     /*
-      Crossover and mutation
+      crossover and mutation
     */
+    Population offspring;
+    int offCount=2*parentCount*(parentCount-1);
+    for(int i=0;i<offCount;i++){
+      thrust::device_vector<int> kromosom(config.nCust,0);
+      offspring.kromosom.push_back(kromosom);
+    }
+    offspring.totalDist = thrust::device_vector<double>(offCount);
+    offspring.fitnessValue = thrust::device_vector<double>(offCount);
+    offspring.routeCount = thrust::device_vector<double>(offCount);
+    crossoverMutation(population, offspring, parentsIdx, config);
   }
 
 
