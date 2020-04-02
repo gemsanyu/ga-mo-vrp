@@ -107,7 +107,8 @@ double getEuclideanDistance(double x0, double y0, double x1, double y1);
 void readConfig(std::string configFileName, Config &config);
 void readData(Config &config, Data &data);
 void initPopulation(Population &population, Data &data, Config &config);
-void initKromosomRandom(thrust::device_vector<int> &kromosom, int nCust);
+void initKromosomRandom(thrust::device_vector<int> &kromosom, int nCust,
+  thrust::default_random_engine randEng, thrust::uniform_real_distribution<double> uniDist);
 void initKromosomGreedy(thrust::device_vector<int> &kromosom, int initialIdx,
   Data &data, Config &config);
 void decodeKromosom(thrust::device_vector<int> kromosom, Data data,
@@ -116,7 +117,7 @@ void sortPopulationByFitness(Population &population, Config const &config);
 void getParentsIdx(Population const &population, Config const &config,
   thrust::device_vector<int> &parentsIdx, int &parentCount);
   void crossoverMutation(Population population, Population &offspring,
-    thrust::device_vector<int> parentsIdx, Config config);
+    thrust::device_vector<int> parentsIdx, int parentCount, Config config);
 __global__ void orderCrossover(int *nCust, int **kromosomAs, int **kromosomBs,
   int **kromosomOffs, int *odAs, int *odBs);
 __global__ void rsMutationPar(int **kromosomOffs, int *mutAs, int *mutBs);

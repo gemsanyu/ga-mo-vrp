@@ -1,14 +1,40 @@
 #include "helper_lib.h"
 
+/*
+  remember parentCount != parentsIdx.size
+*/
+
 void crossoverMutation(Population population, Population &offspring,
-  thrust::device_vector<int> parentsIdx, Config config){
+  thrust::device_vector<int> parentsIdx, int parentCount, Config config){
 
     int *d_nCust;
     cudaMalloc(&d_nCust, sizeof(int));
     cudaMemcpy(d_nCust, &config.nCust, sizeof(int), cudaMemcpyHostToDevice);
-    int offCount = offspring.kromosom.size();
-    int parentCount = parentsIdx.size();
 
+
+    thrust::device_vector<int*> d_kromosomAs;
+    thrust::device_vector<int*> d_kromosomBs;
+
+    int offCount=0;
+    for(int i=0;i<parentCount;i++){
+      int pIdx1=parentsIdx[i];
+      for(int j=0;j<parentCount;j++){
+        if(i==j){
+          continue;
+        }
+        offCount++;
+        int pIdx2=parentsIdx[j];
+        thrust::device_vector<int> kromosom(config.nCust,0);
+        offspring.kromosom.push_back(kromosom);
+        d_kromosomAs.push_back(thrust::raw_pointer_cast(population.kromosom[pIdx1].data()));
+        d_kromosomBs.push_back(thrust::raw_pointer_cast(population.kromosom[pIdx2].data()));
+      }
+    }
+    offspring.totalDist = thrust::device_vector<double>(offCount);
+    offspring.fitnessValue = thrust::device_vector<double>(offCount);
+    offspring.routeCount = thrust::device_vector<double>(offCount);
+    int **pd_kromosomAs = thrust::raw_pointer_cast(d_kromosomAs.data());
+    int **pd_kromosomBs = thrust::raw_pointer_cast(d_kromosomBs.data());
   /*
     Crossover and mutation
     preparing
@@ -43,7 +69,7 @@ void crossoverMutation(Population population, Population &offspring,
     h_mutA.begin(),
     RandIntDynamicUpper()
   );
-  
+
   thrust::device_vector<int> mutA=h_mutA;
   thrust::device_vector<int> mutB=h_mutB;
   int *p_mutA = thrust::raw_pointer_cast(mutA.data());
@@ -52,23 +78,6 @@ void crossoverMutation(Population population, Population &offspring,
   thrust::host_vector<double> h_mutProb(offCount);
   thrust::generate(h_mutProb.begin(), h_mutProb.end(), Rand01());
   thrust::device_vector<double> mutProb = h_mutProb;
-
-  thrust::device_vector<int*> d_kromosomAs;
-  thrust::device_vector<int*> d_kromosomBs;
-  int ofIdx=0;
-  for(int i=0;i<parentCount;i++){
-    int pIdx1=parentsIdx[i];
-    for(int j=0;j<parentCount;j++, ofIdx++){
-      if(i==j){
-        continue;
-      }
-      int pIdx2=parentsIdx[j];
-      d_kromosomAs.push_back(thrust::raw_pointer_cast(population.kromosom[pIdx1].data()));
-      d_kromosomBs.push_back(thrust::raw_pointer_cast(population.kromosom[pIdx2].data()));
-    }
-  }
-  int **pd_kromosomAs = thrust::raw_pointer_cast(d_kromosomAs.data());
-  int **pd_kromosomBs = thrust::raw_pointer_cast(d_kromosomBs.data());
 
   /*
     crossover

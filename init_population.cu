@@ -1,6 +1,8 @@
 #include <thrust/device_vector.h>
 #include <thrust/functional.h>
 #include <thrust/random.h>
+#include <thrust/system/cuda/execution_policy.h>
+#include <omp.h>
 #include <cstring>
 #include <vector>
 
@@ -46,15 +48,29 @@ struct CheckIsUsed : public thrust::binary_function<bool,double,double> {
   }
 };
 
+struct GenRand{
+  thrust::default_random_engine randEng;
+  thrust::uniform_real_distribution<double> uniDist;
+
+  GenRand(thrust::default_random_engine _randEng,
+    thrust::uniform_real_distribution<double> _uniDist) : randEng(_randEng), uniDist(_uniDist) {}
+
+  __device__
+  double operator () (){
+    return uniDist(randEng);
+  }
+};
+
 
 void initPopulation(Population &population, Data &data, Config &config){
   thrust::default_random_engine randEng;
   thrust::uniform_real_distribution<double> uniDist(0,1);
   randEng.discard(time(NULL));
 
+  #pragma omp parallel for num_threads(config.N)
   for(int i=0;i<config.N;i++){
     if(i%2==0){
-      initKromosomRandom(population.kromosom[i], config.nCust);
+      initKromosomRandom(population.kromosom[i], config.nCust, randEng, uniDist);
     } else {
       int initialIdx = uniDist(randEng)*(double)config.nCust;
       initKromosomGreedy(population.kromosom[i], initialIdx, data, config);
@@ -107,6 +123,7 @@ void initKromosomGreedy(thrust::device_vector<int> &kromosom, int initialIdx,
     );
 
     thrust::transform(
+      thrust::device,
       isUsed.begin(),
       isUsed.end(),
       distancesToNextCust.begin(),
@@ -115,6 +132,7 @@ void initKromosomGreedy(thrust::device_vector<int> &kromosom, int initialIdx,
     );
 
     thrust::transform(
+      thrust::device,
       distancesToNextCust.begin(),
       distancesToNextCust.end(),
       distancesCustToDepot.begin(),
@@ -123,6 +141,7 @@ void initKromosomGreedy(thrust::device_vector<int> &kromosom, int initialIdx,
     );
 
     thrust::transform(
+      thrust::device,
       data.customers.orderSize.begin(),
       data.customers.orderSize.end(),
       distancesToNextCust.begin(),
@@ -159,10 +178,10 @@ void initKromosomGreedy(thrust::device_vector<int> &kromosom, int initialIdx,
   }
 }
 
-void initKromosomRandom(thrust::device_vector<int> &kromosom, int nCust){
+void initKromosomRandom(thrust::device_vector<int> &kromosom, int nCust,
+  thrust::default_random_engine randEng, thrust::uniform_real_distribution<double> uniDist){
   thrust::sequence(kromosom.begin(), kromosom.end(), 0, 1);
-  thrust::host_vector<double> h_randKey(nCust);
-  thrust::generate(h_randKey.begin(), h_randKey.end(), rand);
-  thrust::device_vector<double> randKey = h_randKey;
+  thrust::device_vector<double> randKey(nCust);
+  thrust::generate(randKey.begin(), randKey.end(), GenRand(randEng, uniDist));
   thrust::sort_by_key(randKey.begin(), randKey.end(), kromosom.begin());
 }

@@ -15,6 +15,8 @@ int main(int argc, char **argv){
   readData(config, data);
   Population population;
 
+  double start, end;
+  start = omp_get_wtime();
   /*
     init population
   */
@@ -23,7 +25,9 @@ int main(int argc, char **argv){
     population.kromosom.push_back(newKromosom);
   }
   initPopulation(population, data, config);
-
+  end = omp_get_wtime();
+  std::cout<<std::fixed<<std::setprecision(9)<<end-start<<"\n";
+  start = omp_get_wtime();
   /*
     decoding and computing fitness value
   */
@@ -38,6 +42,9 @@ int main(int argc, char **argv){
     population.routeCount[i]=routeCount_t;
     population.totalDist[i]=totalDist_t;
   }
+  end = omp_get_wtime();
+  std::cout<<std::fixed<<std::setprecision(9)<<end-start<<"\n";
+
 
   thrust::transform(
     population.totalDist.begin(),
@@ -60,6 +67,7 @@ int main(int argc, char **argv){
       parent selection by roulette wheel based on
       fitness value
     */
+    start = omp_get_wtime();
     thrust::device_vector<int> parentsIdx(config.NP);
     int parentCount;
     getParentsIdx(population, config, parentsIdx, parentCount);
@@ -68,15 +76,10 @@ int main(int argc, char **argv){
       crossover and mutation
     */
     Population offspring;
-    int offCount=2*parentCount*(parentCount-1);
-    for(int i=0;i<offCount;i++){
-      thrust::device_vector<int> kromosom(config.nCust,0);
-      offspring.kromosom.push_back(kromosom);
-    }
-    offspring.totalDist = thrust::device_vector<double>(offCount);
-    offspring.fitnessValue = thrust::device_vector<double>(offCount);
-    offspring.routeCount = thrust::device_vector<double>(offCount);
-    crossoverMutation(population, offspring, parentsIdx, config);
+    crossoverMutation(population, offspring, parentsIdx, parentCount, config);
+    end = omp_get_wtime();
+    std::cout<<"iter-"<<t<<"\n";
+    std::cout<<std::fixed<<std::setprecision(9)<<end-start<<"\n";
   }
 
 
