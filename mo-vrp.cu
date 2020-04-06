@@ -63,6 +63,27 @@ int main(int argc, char **argv){
   end = omp_get_wtime();
   double initTime = end-start;
 
+
+  /*
+    preparing cuda vectors, to lessen cuda malloc calls
+  */
+  int maxOffSize = config->NP * (config->NP-1);
+  vector<int*> d_kromosomAs(maxOffSize), d_kromosomBs(maxOffSize), d_kromosomOffs(maxOffSize);
+  vector<int*> d_odAs(maxOffSize), d_odBs(maxOffSize), d_mutAs(maxOffSize), d_mutBs(maxOffSize);
+  vector<cudaStream_t> cudaStreams(maxOffSize);
+
+  for(int i=0;i<maxOffSize;i++){
+    cudaStreamCreate(&cudaStreams[i]);
+    cudaMalloc(&d_kromosomAs[i], config->nCust*sizeof(int));
+    cudaMalloc(&d_kromosomBs[i], config->nCust*sizeof(int));
+    cudaMalloc(&d_kromosomOffs[i], config->nCust*sizeof(int));
+    cudaMalloc(&d_odAs[i], sizeof(int));
+    cudaMalloc(&d_odBs[i], sizeof(int));
+    cudaMalloc(&d_mutAs[i], sizeof(int));
+    cudaMalloc(&d_mutBs[i], sizeof(int));
+  }
+
+
   /*
     Start the GA
     for MaxIter
@@ -151,38 +172,10 @@ int main(int argc, char **argv){
     /*
       prepare data in cuda device memory
     */
-    vector<int*> d_kromosomAs, d_kromosomBs, d_kromosomOffs;
-    vector<int*> d_odAs, d_odBs, d_mutAs, d_mutBs;
-    vector<cudaStream_t> cudaStreams;
-
     for(int i=0;i<offSize;i++){
       /*
         with cuda streams, malloc and memcpy is asynchronous, hopefully faster
       */
-      cudaStream_t stream;
-      cudaStreamCreate(&stream);
-      cudaStreams.push_back(stream);
-
-
-      int *d_kromosomP1, *d_kromosomP2, *d_kromosomOff;
-      d_kromosomAs.push_back(d_kromosomP1);
-      d_kromosomBs.push_back(d_kromosomP2);
-      d_kromosomOffs.push_back(d_kromosomOff);
-
-      int *d_odA, *d_odB, *d_mutA, *d_mutB;
-      d_odAs.push_back(d_odA);
-      d_odBs.push_back(d_odB);
-      d_mutAs.push_back(d_mutA);
-      d_mutBs.push_back(d_mutB);
-
-      cudaMalloc(&d_kromosomAs[i], config->nCust*sizeof(int));
-      cudaMalloc(&d_kromosomBs[i], config->nCust*sizeof(int));
-      cudaMalloc(&d_kromosomOffs[i], config->nCust*sizeof(int));
-      cudaMalloc(&d_odAs[i], sizeof(int));
-      cudaMalloc(&d_odBs[i], sizeof(int));
-      cudaMalloc(&d_mutAs[i], sizeof(int));
-      cudaMalloc(&d_mutBs[i], sizeof(int));
-
       cudaMemcpyAsync(d_kromosomAs[i], kromosomAs[i], config->nCust*sizeof(int), cudaMemcpyHostToDevice);
       cudaMemcpyAsync(d_kromosomBs[i], kromosomBs[i], config->nCust*sizeof(int), cudaMemcpyHostToDevice);
       cudaMemcpyAsync(d_odAs[i], &odAs[i], sizeof(int), cudaMemcpyHostToDevice, cudaStreams[i]);
@@ -220,33 +213,12 @@ int main(int argc, char **argv){
     }
 
     /*
-      freeing cuda memory
-    */
-    for(int i=0; i<offSize; i++){
-      cudaFree(d_kromosomAs[i]);
-      cudaFree(d_kromosomBs[i]);
-      cudaFree(d_kromosomOffs[i]);
-      cudaFree(d_odAs[i]);
-      cudaFree(d_odBs[i]);
-      cudaFree(d_mutAs[i]);
-      cudaFree(d_mutBs[i]);
-      cudaStreamDestroy(cudaStreams[i]);
-    }
-    vector<int*>().swap(d_kromosomAs);
-    vector<int*>().swap(d_kromosomBs);
-    vector<int*>().swap(d_kromosomOffs);
-    vector<int*>().swap(d_odAs);
-    vector<int*>().swap(d_odBs);
-    vector<int*>().swap(d_mutAs);
-    vector<int*>().swap(d_mutBs);
-
-
-    /*
       selection NSGA2
     */
     vector<Individu*> newPopulation = selectionNSGA2(config,&population);
     population = newPopulation;
     vector<Individu*>().swap(newPopulation);
+    population.shrink_to_fit();
 
     /*
       note best fitness
@@ -268,6 +240,27 @@ int main(int argc, char **argv){
   }
   end = omp_get_wtime();
   double totalTime = end-start;
+
+  /*
+    freeing cuda memory
+  */
+  for(int i=0; i<maxOffSize; i++){
+    cudaFree(d_kromosomAs[i]);
+    cudaFree(d_kromosomBs[i]);
+    cudaFree(d_kromosomOffs[i]);
+    cudaFree(d_odAs[i]);
+    cudaFree(d_odBs[i]);
+    cudaFree(d_mutAs[i]);
+    cudaFree(d_mutBs[i]);
+    cudaStreamDestroy(cudaStreams[i]);
+  }
+  vector<int*>().swap(d_kromosomAs);
+  vector<int*>().swap(d_kromosomBs);
+  vector<int*>().swap(d_kromosomOffs);
+  vector<int*>().swap(d_odAs);
+  vector<int*>().swap(d_odBs);
+  vector<int*>().swap(d_mutAs);
+  vector<int*>().swap(d_mutBs);
 
   // cout<<"Obtained PF\n";
   // for(int i=0;i<population.size();i++){
