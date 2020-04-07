@@ -86,10 +86,11 @@ vector<Individu*> selectionNSGA2(Config *config, vector<Individu*>* population){
     sortCrowdingDistance(paretoFronts[i]);
     for(int j=0;j<paretoFronts[i].size();j++){
       if(newPopulation.size()==config->N){
-        newPopulationFull=true;
-        break;
+        delete[] paretoFronts[i][j]->kromosom;
+        delete paretoFronts[i][j];
+      } else {
+        newPopulation.push_back(paretoFronts[i][j]);
       }
-      newPopulation.push_back(paretoFronts[i][j]);
     }
   }
 

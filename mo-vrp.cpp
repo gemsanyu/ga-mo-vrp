@@ -177,6 +177,10 @@ int main(int argc, char **argv){
   /*
     freeing memory
   */
+  for(int i=0;i<population.size();i++){
+    delete[] population[i]->kromosom;
+    delete population[i];
+  }
   vector<Individu*>().swap(population);
 
 }
