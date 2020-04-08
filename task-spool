@@ -1,0 +1,49 @@
+!/bin/bash
+
+for i in {1..3}
+do
+	for j in {1..5}
+	do
+		tsp ./mo-vrp config/parameter-${i} data/small-distributed;	
+	done
+done
+
+for i in {1..3}
+do
+	for j in {1..5}
+	do
+		tsp ./mo-vrp config/parameter-${i} data/small-clustered;	
+	done
+done
+
+for i in {1..3}
+do
+	for j in {1..5}
+	do
+		tsp ./mo-vrp config/parameter-${i} data/medium-distributed;	
+	done
+done
+
+for i in {1..3}
+do
+	for j in {1..5}
+	do
+		tsp ./mo-vrp config/parameter-${i} data/medium-clustered;	
+	done
+done
+
+for i in {1..3}
+do
+	for j in {1..5}
+	do
+		tsp ./mo-vrp config/parameter-${i} data/large-distributed;	
+	done
+done
+
+for i in {1..3}
+do
+	for j in {1..5}
+	do
+		tsp ./mo-vrp config/parameter-${i} data/large-clustered;	
+	done
+done

@@ -1,0 +1,31 @@
+!/bin/bash
+
+for i in {6..20}
+do
+	tsp -c ${i} >> results/small-distributed
+done
+
+for i in {21..35}
+do
+	tsp -c ${i} >> results/small-clustered
+done
+
+for i in {36..50}
+do
+	tsp -c ${i} >> results/medium-distributed
+done
+
+for i in {51..65}
+do
+	tsp -c ${i} >> results/medium-clustered
+done
+
+for i in {66..80}
+do
+	tsp -c ${i} >> results/large-distributed
+done
+
+for i in {81..95}
+do
+	tsp -c ${i} >> results/large-clustered
+done

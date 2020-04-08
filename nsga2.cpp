@@ -49,7 +49,6 @@ vector<vector<Individu*>> getParetoFronts(vector<Individu*>* population){
     and get the next pareto optimal front from the population
     repeat
   */
-  int iter=0;
   while(!population->empty()){
     paretoFronts.push_back(paretoFront);
     vector<Individu*> lastParetoFront = paretoFront;
