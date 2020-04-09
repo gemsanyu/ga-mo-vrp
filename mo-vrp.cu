@@ -6,6 +6,7 @@
 #include<thrust/host_vector.h>
 #include<thrust/execution_policy.h>
 
+#include"crossover_mutation.h"
 #include"ga_lib.h"
 #include"helper_lib.h"
 using namespace std;
@@ -85,6 +86,8 @@ int main(int argc, char **argv){
     preparing memory
   */
   int maxOffSize = config->NP * (config->NP+1);
+  thrust::host_vector<double> probs(config->N);
+  thrust::host_vector<int> parentIdxs(config->NP);
   thrust::host_vector<int> odAs(maxOffSize), odBs(maxOffSize);
   thrust::host_vector<int> mutAs(maxOffSize), mutBs(maxOffSize);
   thrust::host_vector<bool> isMuts(maxOffSize);
@@ -124,14 +127,14 @@ int main(int argc, char **argv){
       spinning roulette wheel
       then delete the infertile parent based on PC
     */
-    vector<int> rwResult = spinRouletteWheel(&population, config->NP);
-    vector<int> parentsIdx;
-    for(int p=0;p<rwResult.size();p++){
+    spinRouletteWheel(&population, config->NP, probs, parentIdxs);
+    vector<int> chosenParentIdxs;
+    for(int p=0;p<parentIdxs.size();p++){
       double r = (double) rand()/RAND_MAX;
       if (r>config->pc){
         continue;
       }
-      parentsIdx.push_back(rwResult[p]);
+      chosenParentIdxs.push_back(parentIdxs[p]);
     }
 
 
@@ -139,7 +142,7 @@ int main(int argc, char **argv){
       generating offsprings
       with complete pairs of the chosen parents doing odx crossover
     */
-    int chosenParentSize=parentsIdx.size();
+    int chosenParentSize=chosenParentIdxs.size();
     int offSize = chosenParentSize * (chosenParentSize - 1);
 
     /*
@@ -153,10 +156,10 @@ int main(int argc, char **argv){
 
     int ofIdx=0;
     for(int p1=0;p1<chosenParentSize;p1++){
-      int pIdx1 = parentsIdx[p1];
+      int pIdx1 = chosenParentIdxs[p1];
       int* kromosomP1 = population[pIdx1]->kromosom;
       for(int p2=p1+1;p2<chosenParentSize;p2++, ofIdx+=2){
-        int pIdx2 = parentsIdx[p2];
+        int pIdx2 = chosenParentIdxs[p2];
         int* kromosomP2 = population[pIdx2]->kromosom;
 
         int* kromosomOff1 = create1DArrayInt(config->nCust);
