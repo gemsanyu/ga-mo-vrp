@@ -168,12 +168,20 @@ int main(int argc, char **argv){
   // cout<<"GA stopped at iteration-"<<iter<<"\n";
   // cout<<fixed<<setprecision(8)<<"Total Time: "<<totalTime<<"\n";
   // cout<<fixed<<setprecision(8)<<"Mean Time per iteration: "<<totalTime/(double)iter<<"\n";
-  cout<<fixed<<setprecision(8)<<initTime<<",";
-  cout<<iter<<",";
-  cout<<fixed<<setprecision(8)<<totalTime<<",";
-  cout<<fixed<<setprecision(8)<<totalTime/(double)iter<<",";
-  cout<<fixed<<setprecision(8)<<bestFitness<<","<<bestIndividu.routeCount<<","<<bestIndividu.totalDist<<"\n";
+  cout<<fixed<<setprecision(8)<<"Time for population initialization: "<<initTime<<"\n";
+  cout<<"Iterations: "<<iter<<"\n";
+  cout<<fixed<<setprecision(8)<<"Total time elapsed: "<<totalTime<<"\n";
+  cout<<fixed<<setprecision(8)<<"Average time per iteration: "<<totalTime/(double)iter<<"\n";
+  cout<<"Route counts: "<<bestIndividu.routeCount<<"\n";
+  cout<<fixed<<setprecision(8)<<"Total distance: "<<bestIndividu.totalDist<<"\n";
 
+  cout<<"\nRoutes:\n";
+  for(int i=0;i<bestIndividu.routeSet.routes.size(); i++){
+    for(int j=0;j<bestIndividu.routeSet.routes[i].size(); j++){
+      cout<<bestIndividu.routeSet.routes[i][j]<<",";
+    }
+      cout<<"\n";
+  }
   /*
     freeing memory
   */
