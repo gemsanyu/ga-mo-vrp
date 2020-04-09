@@ -45,8 +45,8 @@ int* encodeRouteSet(Config *config, RouteSet *routeSet);
 void initIndividuRandom(int nCust, int* kromosom);
 void initIndividuGreedy(Config* config, OrderData* orderData, int* kromosom);
 bool isDominate(Individu* idvA, Individu* idvB);
-void orderCrossover(Config* config, int* kromosomA, int* kromosomB, int* kromosomOffs);
-void rsMutation(Config* config, int* kromosomOffs);
+void crossoverMutation(int nCust, int offSize, int **kromosomAs, int **kromosomBs,
+  int **kromosomOffs, int *odAs, int *odBs, bool *isMuts, int *mutAs, int *mutBs);
 void readOrderData(Config *config, OrderData *orderData);
 vector<Individu*> selectionNSGA2(Config *config, vector<Individu*>* population);
 void sortCrowdingDistance(vector<Individu*>population);

@@ -7,10 +7,10 @@ LCUDAFLAGS= -I/usr/local/cuda/include -L/usr/local/cuda/lib64  -lcudart -lcuda
 # all: mo-vrp
 
 mo-vrp: helper_lib.o ga_lib.o nsga2.o mo-vrp.o
-	$(CPP) $(CPPFLAGS) $? -o $@
+	$(CPP) $(CPPFLAGS) $? -o $@ $(LCUDAFLAGS)
 
-mo-vrp.o: mo-vrp.cpp
-	$(CPP) $(CPPFLAGS) -c $? -o $@
+mo-vrp.o: mo-vrp.cu
+	$(NVCC) $(NVCCFLAGS) -c $? -o $@
 
 # crossover_mutation.o: crossover_mutation.cu
 	# $(NVCC) $(NVCCFLAGS) -c $? -o $@

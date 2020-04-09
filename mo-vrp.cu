@@ -3,10 +3,33 @@
 #include<iostream>
 #include<omp.h>
 #include<time.h>
+#include<thrust/host_vector.h>
+#include<thrust/execution_policy.h>
 
 #include"ga_lib.h"
 #include"helper_lib.h"
 using namespace std;
+
+struct GenRand{
+  int nCust;
+
+  GenRand(int _nCust): nCust(_nCust){}
+
+  int operator() (){
+    return rand()%nCust;
+  }
+};
+
+struct GenIsMut{
+  double pm;
+
+  GenIsMut(double _pm): pm(_pm) {}
+
+  bool operator() (){
+    double r = (double)rand()/(double)RAND_MAX;
+    return r<=pm;
+  }
+};
 
 int main(int argc, char **argv){
   srand(time(NULL));
@@ -59,6 +82,31 @@ int main(int argc, char **argv){
   double initTime = end-start;
 
   /*
+    preparing memory
+  */
+  int maxOffSize = config->NP * (config->NP+1);
+  thrust::host_vector<int> odAs(maxOffSize), odBs(maxOffSize);
+  thrust::host_vector<int> mutAs(maxOffSize), mutBs(maxOffSize);
+  thrust::host_vector<bool> isMuts(maxOffSize);
+  thrust::host_vector<int*> kromosomAs(maxOffSize), kromosomBs(maxOffSize);
+  thrust::host_vector<int*> kromosomOffs(maxOffSize);
+
+  int *p_odAs = thrust::raw_pointer_cast(odAs.data());
+  int *p_odBs = thrust::raw_pointer_cast(odBs.data());
+  int *p_mutAs = thrust::raw_pointer_cast(mutAs.data());
+  int *p_mutBs = thrust::raw_pointer_cast(mutBs.data());
+  bool *p_isMuts = thrust::raw_pointer_cast(isMuts.data());
+  int **p_kromosomAs = thrust::raw_pointer_cast(kromosomAs.data());
+  int **p_kromosomBs = thrust::raw_pointer_cast(kromosomBs.data());
+  int **p_kromosomOffs = thrust::raw_pointer_cast(kromosomOffs.data());
+
+  // for(int i=0;i<maxOffSize;i++){
+    // kromosomAs[i] = (int*) malloc(config->nCust*sizeof(int));
+    // kromosomBs[i] = (int*) malloc(config->nCust*sizeof(int));
+    // kromosomOffs[i] = (int*) malloc(config->nCust*sizeof(int));
+  // }
+
+  /*
     Start the GA
     for MaxIter
     or until
@@ -86,48 +134,51 @@ int main(int argc, char **argv){
       parentsIdx.push_back(rwResult[p]);
     }
 
+
     /*
       generating offsprings
       with complete pairs of the chosen parents doing odx crossover
     */
     int chosenParentSize=parentsIdx.size();
+    int offSize = chosenParentSize * (chosenParentSize - 1);
+
+    /*
+      randomizing crossover points
+    */
+    thrust::generate(thrust::host, odAs.begin(), odAs.begin()+offSize, GenRand(config->nCust));
+    thrust::generate(thrust::host, odBs.begin(), odBs.begin()+offSize, GenRand(config->nCust));
+    thrust::generate(thrust::host, mutAs.begin(), mutAs.begin()+offSize, GenRand(config->nCust));
+    thrust::generate(thrust::host, mutBs.begin(), mutBs.begin()+offSize, GenRand(config->nCust));
+    thrust::generate(thrust::host, isMuts.begin(), isMuts.begin()+offSize, GenIsMut(config->pm));
+
+    int ofIdx=0;
     for(int p1=0;p1<chosenParentSize;p1++){
       int pIdx1 = parentsIdx[p1];
       int* kromosomP1 = population[pIdx1]->kromosom;
-      for(int p2=p1+1;p2<chosenParentSize;p2++){
+      for(int p2=p1+1;p2<chosenParentSize;p2++, ofIdx+=2){
         int pIdx2 = parentsIdx[p2];
         int* kromosomP2 = population[pIdx2]->kromosom;
 
         int* kromosomOff1 = create1DArrayInt(config->nCust);
-        orderCrossover(config, kromosomP1, kromosomP2, kromosomOff1);
-
         int* kromosomOff2 = create1DArrayInt(config->nCust);
-        orderCrossover(config, kromosomP2, kromosomP1, kromosomOff2);
-        /*
-          mutating offspring
-        */
-        double r=rand()/RAND_MAX;
-        if (r<config->pm){
-          rsMutation(config, kromosomOff1);
-        }
-
-        r=rand()/RAND_MAX;
-        if (r<config->pm){
-          rsMutation(config, kromosomOff2);
-        }
-
-        Individu* off1 = new Individu();
-        off1->kromosom = kromosomOff1;
-        decodeKromosom(config, off1->kromosom, orderData, &off1->routeSet);
-        calculateFitness(off1);
-
-        Individu* off2 = new Individu;
-        off2->kromosom = kromosomOff2;
-        decodeKromosom(config, off2->kromosom, orderData, &off2->routeSet);
-        calculateFitness(off2);
-        population.push_back(off1);
-        population.push_back(off2);
+        kromosomAs[ofIdx]=kromosomP1;
+        kromosomBs[ofIdx]=kromosomP2;
+        kromosomAs[ofIdx+1]=kromosomP2;
+        kromosomBs[ofIdx+1]=kromosomP1;
+        kromosomOffs[ofIdx]=kromosomOff1;
+        kromosomOffs[ofIdx+1]=kromosomOff2;
       }
+    }
+
+    crossoverMutation(config->nCust, offSize, p_kromosomAs, p_kromosomBs,
+      p_kromosomOffs, p_odAs, p_odBs, p_isMuts, p_mutAs, p_mutBs);
+
+    for(int i=0;i<offSize;i++){
+      Individu* offspring = new Individu();
+      offspring->kromosom = kromosomOffs[i];
+      decodeKromosom(config, offspring->kromosom, orderData, &offspring->routeSet);
+      calculateFitness(offspring);
+      population.push_back(offspring);
     }
 
 

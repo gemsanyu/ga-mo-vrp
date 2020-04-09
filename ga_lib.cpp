@@ -194,69 +194,78 @@ bool isDominate(Individu* idvA, Individu* idvB){
   ((idvA->totalDist<idvB->totalDist) || (idvA->routeCount<idvB->routeCount));
 }
 
-void orderCrossover(Config *config, int* kromosomA, int* kromosomB, int* kromosomOff){
-  /*
-    First randomize segment points a and b
-  */
-  int a=rand()%config->nCust;
-  int b=rand()%config->nCust;
-  if (a>b){
-    int c=a;
-    a=b;
-    b=c;
-  }
+void crossoverMutation(int nCust, int offSize, int **kromosomAs, int **kromosomBs,
+  int **kromosomOffs, int *odAs, int *odBs, bool *isMuts, int *mutAs, int *mutBs){
 
-  /*
-    copy parentA segment (a,b) to offspring segment(a,b)
-  */
-  bool *genExistFlag = create1DArrayBool(config->nCust);
-  for (int c=a;c<=b;c++){
-    int custID = kromosomA[c];
-    kromosomOff[c] = custID;
-    genExistFlag[custID] = true;
-  }
+  bool *genExistFlag = create1DArrayBool(nCust);
+  for(int idx=0;idx<offSize;idx++){
+    int odA = odAs[idx];
+    int odB = odBs[idx];
+    int mutA = mutAs[idx];
+    int mutB = mutBs[idx];
 
-  /*
-    and then add parentB's gens
-    not yet contained by the offspring
-  */
-  int ofIdx=(b+1)%config->nCust;
-  for (int genBIdx=(b+1)%config->nCust;ofIdx<a || ofIdx>b;genBIdx = (genBIdx+1)%config->nCust){
-    int gen = kromosomB[genBIdx];
-    if (genExistFlag[gen]){
+    int *kromosomA = kromosomAs[idx];
+    int *kromosomB = kromosomBs[idx];
+    int *kromosomOff = kromosomOffs[idx];
+
+    // cout<<odA<<" "<<odB<<" "<<isMut<<" "<<mutA<<" "<<mutB<<"\n";
+    if (odA>odB){
+      int c=odA;
+      odA=odB;
+      odB=c;
+    }
+
+    /*
+      copy parentA segment (a,b) to offspring segment(a,b)
+    */
+    for(int i=0;i<nCust;i++){
+      genExistFlag[i]=false;
+    }
+
+    for (int c=odA;c<=odB;c++){
+      int custID = kromosomA[c];
+      kromosomOff[c] = custID;
+      genExistFlag[custID] = true;
+    }
+
+    /*
+      and then add parentB's gens
+      not yet contained by the offspring
+    */
+    int ofIdx=(odB+1)%nCust;
+    for (int genBIdx=(odB+1)%nCust;ofIdx<odA || ofIdx>odB;genBIdx = (genBIdx+1)%nCust){
+      int gen = kromosomB[genBIdx];
+      if (genExistFlag[gen]){
+        continue;
+      }
+      kromosomOff[ofIdx]=gen;
+
+      genExistFlag[gen]=true;
+      ofIdx = (ofIdx+1)%nCust;
+    }
+
+    if(!isMuts[idx]){
       continue;
     }
-    kromosomOff[ofIdx]=gen;
 
-    genExistFlag[gen]=true;
-    ofIdx = (ofIdx+1)%config->nCust;
+    /*
+      swapping mutation
+    */
+    if(mutA>mutB){
+      int c = mutA;
+      mutA = mutB;
+      mutB = c;
+    }
+
+    int halfCount = (mutB-mutA+1)/2;
+    for(int i=0;i<halfCount;i++){
+      int custID = kromosomOff[mutA+i];
+      kromosomOff[mutA+i] = kromosomOff[mutB-i];
+      kromosomOff[mutB-i] = custID;
+    }
   }
 
   delete[] genExistFlag;
-}
-
-void rsMutation(Config *config, int* kromosom){
-  /*
-    First randomize Mutation-segment points a and b
-  */
-  int a=rand()%config->nCust;
-  int b=rand()%config->nCust;
-  //Switch Mutation-segment points if a is higher than b
-  if (a>b){
-    int c=a;
-    a=b;
-    b=c;
-  }
-  int indxMutA = a;
-  int indxMutB = b;
-
-  //Swapping Algorithm
-  while(indxMutA<indxMutB){
-    int custID = kromosom[indxMutA];
-    kromosom[indxMutA] = kromosom[indxMutB];
-    kromosom[indxMutB] = custID;
-    indxMutA++;indxMutB--;
-  }
 }
 
 void readOrderData(Config *config, OrderData *odData){
