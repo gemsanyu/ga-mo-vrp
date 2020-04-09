@@ -1,6 +1,12 @@
 One Way to run this
 
-g++ -g --std=c++11 -O3 -march=native -fopenmp helper_lib.cpp ga_lib.cpp nsga2.cpp mo-vrp.cpp -o mo-vrp; ./mo-vrp config/parameter-1 data/small-distributed
+Compiling:
+
+make clean; make mo-vrp;
+
+Running
+
+ ./mo-vrp config/parameter-1 data/small-distributed
 
 
 
