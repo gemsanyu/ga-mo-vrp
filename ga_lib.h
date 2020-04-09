@@ -48,5 +48,6 @@ bool isDominate(Individu* idvA, Individu* idvB);
 void readOrderData(Config *config, OrderData *orderData);
 vector<Individu*> selectionNSGA2(Config *config, vector<Individu*>* population);
 void sortCrowdingDistance(vector<Individu*>population);
+void writeRoutes(string orderDataName, RouteSet routeSet);
 
 #endif

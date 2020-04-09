@@ -206,3 +206,15 @@ void readOrderData(Config *config, OrderData *odData){
   }
   dataFile.close();
 }
+
+void writeRoutes(string routeFileName, RouteSet routeSet){
+  ofstream routeFile;
+  routeFile.open(routeFileName);
+  for(int i=0;i<routeSet.routes.size();i++){
+    for(int j=0;j<routeSet.routes[i].size();j++){
+      routeFile << routeSet.routes[i][j]<<",";
+    }
+    routeFile<<"\n";
+  }
+  routeFile.close();
+}
